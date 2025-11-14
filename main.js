@@ -64,9 +64,8 @@ function createWindow() {
   // Do not intercept mouse/keyboard events
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
-  mainWindow.once('ready-to-show', async () => {
+  mainWindow.once('ready-to-show', () => {
     mainWindow.showInactive(); // show without focusing
-    await applyOverlayStyles();
     if (process.env.INTEGRATION_TEST) {
       // Signal to tests and exit soon after
       // eslint-disable-next-line no-console
@@ -75,6 +74,17 @@ function createWindow() {
         app.quit();
       }, 300);
     }
+  });
+
+  mainWindow.webContents.once('dom-ready', async () => {
+    // Small delay to ensure DOM is fully ready
+    await new Promise(resolve => setTimeout(resolve, 50));
+    await applyOverlayStyles();
+  });
+  
+  mainWindow.webContents.once('did-finish-load', async () => {
+    // Also apply on did-finish-load as backup
+    await applyOverlayStyles();
   });
 
   mainWindow.on('closed', () => {
@@ -90,22 +100,16 @@ async function applyOverlayStyles() {
     if (!currentSettings) currentSettings = readSettings();
     // Update window size if diameter changed
     updateWindowSize();
-    // Wait for window to be ready if needed
-    if (!mainWindow.webContents.isLoading()) {
-      if (overlayCssKey) {
-        try {
-          await mainWindow.webContents.removeInsertedCSS(overlayCssKey);
-        } catch {}
-        overlayCssKey = null;
-      }
-      const css = buildOverlayCssVariables(currentSettings);
-      overlayCssKey = await mainWindow.webContents.insertCSS(css);
-    } else {
-      // If window is still loading, apply styles when ready
-      mainWindow.webContents.once('did-finish-load', () => {
-        applyOverlayStyles();
-      });
+    // Remove old CSS if exists
+    if (overlayCssKey) {
+      try {
+        await mainWindow.webContents.removeInsertedCSS(overlayCssKey);
+      } catch {}
+      overlayCssKey = null;
     }
+    // Apply new CSS
+    const css = buildOverlayCssVariables(currentSettings);
+    overlayCssKey = await mainWindow.webContents.insertCSS(css);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to apply overlay styles:', err);
