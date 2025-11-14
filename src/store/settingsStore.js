@@ -3,11 +3,13 @@ const path = require('path');
 const { app } = require('electron');
 
 const DEFAULT_SETTINGS = {
-  diameterPx: 20,
+  diameterPx: 60,
   opacity: 0.55,
   colorHex: '#ff0000',
   durationSeconds: 60,
-  stepped: false
+  stepped: false,
+  autostart: false,
+  showTray: true
 };
 
 function getSettingsPath() {
@@ -41,10 +43,16 @@ function writeSettings(settings) {
   }
 }
 
+function isFirstRun() {
+  const file = getSettingsPath();
+  return !fs.existsSync(file);
+}
+
 module.exports = {
   DEFAULT_SETTINGS,
   readSettings,
-  writeSettings
+  writeSettings,
+  isFirstRun
 };
 
 

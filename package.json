@@ -1,17 +1,59 @@
 {
   "name": "timer-overlay",
   "version": "1.0.0",
-  "description": "Windows 11 overlay: red circle moving along the right edge, click-through",
+  "description": "Memento mori productivity widget - red circle overlay reminding you of time passing. Windows productivity tool.",
   "main": "main.js",
   "type": "commonjs",
+  "bin": {
+    "timer-overlay": "./main.js"
+  },
   "scripts": {
     "start": "electron .",
     "test": "jest",
     "test:unit": "jest --selectProjects unit",
-    "test:integration": "jest --selectProjects integration"
+    "test:integration": "jest --selectProjects integration",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "dist": "electron-builder --publish=never"
   },
+  "keywords": [
+    "productivity",
+    "timer",
+    "overlay",
+    "memento-mori",
+    "time-management",
+    "windows",
+    "electron",
+    "widget",
+    "reminder",
+    "focus"
+  ],
+  "author": "cynepnaxa2",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cynepnaxa2/timer-overlay.git"
+  },
+  "homepage": "https://github.com/cynepnaxa2/timer-overlay#readme",
+  "bugs": {
+    "url": "https://github.com/cynepnaxa2/timer-overlay/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "main.js",
+    "index.html",
+    "settings.html",
+    "preload/",
+    "src/",
+    "assets/",
+    "package.json",
+    "README.md"
+  ],
   "devDependencies": {
     "electron": "^31.0.0",
+    "electron-builder": "^26.0.12",
     "jest": "^29.7.0"
   },
   "jest": {
@@ -32,7 +74,43 @@
       }
     ],
     "testTimeout": 20000
+  },
+  "build": {
+    "appId": "com.timeroverlay.app",
+    "productName": "Timer Overlay",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "settings.html",
+      "preload/**/*",
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/tray-icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "timer-overlay-portable.exe"
+    }
   }
 }
-
-

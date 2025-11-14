@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('settingsApi', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
+  getAutostart: () => ipcRenderer.invoke('get-autostart'),
   updateSettings: (settings) => {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {

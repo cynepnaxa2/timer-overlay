@@ -6,6 +6,9 @@ package-lock.json
 dist/
 build/
 out/
+*.exe
+*.dmg
+*.pkg
 
 # OS files
 .DS_Store

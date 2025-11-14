@@ -1,7 +1,7 @@
 const path = require('path');
 const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
 const { computeWindowBoundsForRightEdge } = require('./src/utils/positioning');
-const { readSettings, writeSettings } = require('./src/store/settingsStore');
+const { readSettings, writeSettings, isFirstRun } = require('./src/store/settingsStore');
 const { buildOverlayCssVariables } = require('./src/utils/style');
 const { createTrayIcon } = require('./src/utils/trayIcon');
 
@@ -13,7 +13,7 @@ let currentSettings = null;
 
 function getOverlayWidth() {
   if (!currentSettings) currentSettings = readSettings();
-  return Math.max(10, Math.min(200, currentSettings.diameterPx || 20));
+  return Math.max(10, Math.min(200, currentSettings.diameterPx || 60));
 }
 
 function updateWindowSize() {
@@ -123,13 +123,15 @@ function createSettingsWindow() {
     return;
   }
   settingsWindow = new BrowserWindow({
-    width: 360,
-    height: 380,
-    resizable: false,
-    minimizable: false,
+    width: 520,
+    height: 680,
+    resizable: true,
+    minimizable: true,
     maximizable: false,
+    minWidth: 480,
+    minHeight: 600,
     show: false,
-    title: 'Overlay Settings',
+    title: 'Настройки Timer Overlay',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -145,6 +147,9 @@ function createSettingsWindow() {
 }
 
 function createTray() {
+  if (!currentSettings) currentSettings = readSettings();
+  if (!currentSettings.showTray) return;
+  
   try {
     const icon = createTrayIcon();
     tray = new Tray(icon);
@@ -165,15 +170,62 @@ function createTray() {
   tray.on('click', () => createSettingsWindow());
 }
 
+function updateTrayVisibility() {
+  if (!currentSettings) currentSettings = readSettings();
+  
+  if (currentSettings.showTray) {
+    if (!tray) {
+      createTray();
+    }
+  } else {
+    if (tray) {
+      tray.destroy();
+      tray = null;
+    }
+  }
+}
+
+function updateAutostart(enabled) {
+  try {
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      openAsHidden: false
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to update autostart:', err);
+  }
+}
+
 function registerIpc() {
   ipcMain.handle('get-settings', () => {
     if (!currentSettings) currentSettings = readSettings();
     return currentSettings;
   });
+  
+  ipcMain.handle('get-autostart', () => {
+    try {
+      return app.getLoginItemSettings().openAtLogin;
+    } catch {
+      return false;
+    }
+  });
+  
   ipcMain.on('update-settings', async (_event, patch) => {
     if (!currentSettings) currentSettings = readSettings();
     currentSettings = writeSettings({ ...currentSettings, ...patch });
     await applyOverlayStyles();
+    
+    // Update autostart if changed
+    if ('autostart' in patch) {
+      updateAutostart(patch.autostart);
+    }
+    
+    // Update tray visibility if changed
+    if ('showTray' in patch) {
+      updateTrayVisibility();
+    }
+    
     // Notify settings window that update succeeded
     if (settingsWindow && !settingsWindow.isDestroyed()) {
       settingsWindow.webContents.send('settings-updated');
@@ -183,9 +235,24 @@ function registerIpc() {
 
 app.whenReady().then(() => {
   currentSettings = readSettings();
+  
+  // Register IPC handlers FIRST, before creating any windows
+  registerIpc();
+  
+  // Apply autostart setting on startup
+  if (currentSettings.autostart !== undefined) {
+    updateAutostart(currentSettings.autostart);
+  }
+  
   createWindow();
   createTray();
-  registerIpc();
+  
+  // Show settings on first run
+  if (isFirstRun()) {
+    setTimeout(() => {
+      createSettingsWindow();
+    }, 500);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
