@@ -14,7 +14,9 @@
     "test:integration": "jest --selectProjects integration",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
-    "dist": "electron-builder --publish=never"
+    "build:portable": "electron-builder --win portable",
+    "dist": "electron-builder --publish=never",
+    "make-exe": "npm run build:portable"
   },
   "keywords": [
     "productivity",
@@ -93,15 +95,11 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
-          "arch": ["x64"]
-        },
-        {
           "target": "portable",
           "arch": ["x64"]
         }
       ],
-      "icon": "assets/tray-icon.png"
+      "forceCodeSigning": false
     },
     "nsis": {
       "oneClick": false,
