@@ -9,10 +9,16 @@ function buildOverlayCssVariables(settings) {
 
   const css = [
     ':root {',
-    `  --dot-size: ${Math.max(1, diameterPx)}px;`,
-    `  --dot-color: rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, opacity))});`,
-    `  --duration: ${Math.max(1, durationSeconds)}s;`,
-    `  --timing: ${timing};`,
+    `  --dot-size: ${Math.max(1, diameterPx)}px !important;`,
+    `  --dot-color: rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, opacity))}) !important;`,
+    `  --duration: ${Math.max(1, durationSeconds)}s !important;`,
+    `  --timing: ${timing} !important;`,
+    '}',
+    'html {',
+    `  --dot-size: ${Math.max(1, diameterPx)}px !important;`,
+    `  --dot-color: rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, opacity))}) !important;`,
+    `  --duration: ${Math.max(1, durationSeconds)}s !important;`,
+    `  --timing: ${timing} !important;`,
     '}'
   ].join('\n');
   return css;

@@ -70,15 +70,26 @@ async function applyOverlayStyles() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   try {
     if (!currentSettings) currentSettings = readSettings();
-    if (overlayCssKey) {
-      try {
-        await mainWindow.webContents.removeInsertedCSS(overlayCssKey);
-      } catch {}
-      overlayCssKey = null;
+    // Wait for window to be ready if needed
+    if (!mainWindow.webContents.isLoading()) {
+      if (overlayCssKey) {
+        try {
+          await mainWindow.webContents.removeInsertedCSS(overlayCssKey);
+        } catch {}
+        overlayCssKey = null;
+      }
+      const css = buildOverlayCssVariables(currentSettings);
+      overlayCssKey = await mainWindow.webContents.insertCSS(css);
+    } else {
+      // If window is still loading, apply styles when ready
+      mainWindow.webContents.once('did-finish-load', () => {
+        applyOverlayStyles();
+      });
     }
-    const css = buildOverlayCssVariables(currentSettings);
-    overlayCssKey = await mainWindow.webContents.insertCSS(css);
-  } catch {}
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to apply overlay styles:', err);
+  }
 }
 
 function createSettingsWindow() {
@@ -132,8 +143,13 @@ function registerIpc() {
     return currentSettings;
   });
   ipcMain.on('update-settings', async (_event, patch) => {
+    if (!currentSettings) currentSettings = readSettings();
     currentSettings = writeSettings({ ...currentSettings, ...patch });
     await applyOverlayStyles();
+    // Notify settings window that update succeeded
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('settings-updated');
+    }
   });
 }
 

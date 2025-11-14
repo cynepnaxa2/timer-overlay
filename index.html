@@ -48,6 +48,33 @@
     <div id="overlay">
       <div class="dot"></div>
     </div>
+    <script>
+      // Restart animation when CSS variables change
+      const dot = document.querySelector('.dot');
+      let lastVars = '';
+      
+      function checkAndUpdate() {
+        const computed = getComputedStyle(document.documentElement);
+        const current = [
+          computed.getPropertyValue('--dot-size'),
+          computed.getPropertyValue('--dot-color'),
+          computed.getPropertyValue('--duration'),
+          computed.getPropertyValue('--timing')
+        ].join('|');
+        
+        if (current !== lastVars) {
+          lastVars = current;
+          // Force animation restart
+          dot.style.animation = 'none';
+          requestAnimationFrame(() => {
+            dot.style.animation = '';
+          });
+        }
+      }
+      
+      // Check for CSS variable changes periodically
+      setInterval(checkAndUpdate, 100);
+    </script>
   </body>
   </html>
 

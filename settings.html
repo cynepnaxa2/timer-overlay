@@ -116,9 +116,22 @@
       $('color').addEventListener('input', () => { readUI(); syncUI(); });
       $('timing').addEventListener('change', () => { readUI(); syncUI(); });
 
-      $('apply').addEventListener('click', () => {
+      $('apply').addEventListener('click', async () => {
         readUI();
-        window.settingsApi.updateSettings(values);
+        try {
+          await window.settingsApi.updateSettings(values);
+          // Show brief feedback
+          const btn = $('apply');
+          const orig = btn.textContent;
+          btn.textContent = '✓ Применено';
+          btn.disabled = true;
+          setTimeout(() => {
+            btn.textContent = orig;
+            btn.disabled = false;
+          }, 1000);
+        } catch (err) {
+          alert('Ошибка при применении настроек: ' + err.message);
+        }
       });
       $('close').addEventListener('click', () => window.close());
 
