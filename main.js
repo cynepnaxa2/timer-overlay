@@ -1,8 +1,9 @@
 const path = require('path');
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
 const { computeWindowBoundsForRightEdge } = require('./src/utils/positioning');
 const { readSettings, writeSettings } = require('./src/store/settingsStore');
 const { buildOverlayCssVariables } = require('./src/utils/style');
+const { createTrayIcon } = require('./src/utils/trayIcon');
 
 let mainWindow = null;
 let settingsWindow = null;
@@ -145,10 +146,13 @@ function createSettingsWindow() {
 
 function createTray() {
   try {
-    // Use the current executable icon as tray icon (works in packaged app; fine in dev)
-    const icon = nativeImage.createFromPath(process.execPath);
+    const icon = createTrayIcon();
     tray = new Tray(icon);
-  } catch {
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to create tray icon:', err);
+    // Fallback to empty icon
+    const { nativeImage } = require('electron');
     tray = new Tray(nativeImage.createEmpty());
   }
   tray.setToolTip('Timer Overlay');
