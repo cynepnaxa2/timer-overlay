@@ -4,17 +4,35 @@ const { computeWindowBoundsForRightEdge } = require('./src/utils/positioning');
 const { readSettings, writeSettings } = require('./src/store/settingsStore');
 const { buildOverlayCssVariables } = require('./src/utils/style');
 
-const OVERLAY_WIDTH_PX = 20;
-
 let mainWindow = null;
 let settingsWindow = null;
 let tray = null;
 let overlayCssKey = null;
 let currentSettings = null;
 
-function createWindow() {
+function getOverlayWidth() {
+  if (!currentSettings) currentSettings = readSettings();
+  return Math.max(10, Math.min(200, currentSettings.diameterPx || 20));
+}
+
+function updateWindowSize() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
   const primaryDisplay = screen.getPrimaryDisplay();
-  const bounds = computeWindowBoundsForRightEdge(primaryDisplay.bounds, OVERLAY_WIDTH_PX);
+  const width = getOverlayWidth();
+  const bounds = computeWindowBoundsForRightEdge(primaryDisplay.bounds, width);
+  mainWindow.setBounds({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height
+  });
+}
+
+function createWindow() {
+  if (!currentSettings) currentSettings = readSettings();
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const width = getOverlayWidth();
+  const bounds = computeWindowBoundsForRightEdge(primaryDisplay.bounds, width);
 
   mainWindow = new BrowserWindow({
     x: bounds.x,
@@ -70,6 +88,8 @@ async function applyOverlayStyles() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   try {
     if (!currentSettings) currentSettings = readSettings();
+    // Update window size if diameter changed
+    updateWindowSize();
     // Wait for window to be ready if needed
     if (!mainWindow.webContents.isLoading()) {
       if (overlayCssKey) {
