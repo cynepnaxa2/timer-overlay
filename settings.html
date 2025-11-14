@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Overlay Settings</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        margin: 12px;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 12px 0;
+      }
+      .row {
+        margin-bottom: 10px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      input[type="range"] {
+        width: 100%;
+      }
+      .actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .value {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Настройки виджета</h1>
+
+    <div class="row">
+      <label for="diameter">Диаметр (пиксели): <span id="diameterVal" class="value"></span></label>
+      <input id="diameter" type="range" min="10" max="100" step="1">
+    </div>
+
+    <div class="row">
+      <label for="opacity">Прозрачность: <span id="opacityVal" class="value"></span></label>
+      <input id="opacity" type="range" min="0.1" max="1" step="0.01">
+    </div>
+
+    <div class="row">
+      <label for="duration">Время подъема (секунд): <span id="durationVal" class="value"></span></label>
+      <input id="duration" type="range" min="5" max="300" step="1">
+    </div>
+
+    <div class="row">
+      <label for="color">Цвет круга:</label>
+      <input id="color" type="color">
+    </div>
+
+    <div class="row">
+      <label for="timing">Режим движения:</label>
+      <select id="timing">
+        <option value="linear">Плавно</option>
+        <option value="steps">Ступеньками (1/60 в секунду)</option>
+      </select>
+    </div>
+
+    <div class="actions">
+      <button id="apply">Применить</button>
+      <button id="close">Закрыть</button>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const values = {
+        diameterPx: 20,
+        opacity: 0.55,
+        colorHex: '#ff0000',
+        durationSeconds: 60,
+        stepped: false
+      };
+
+      function syncUI() {
+        $('diameter').value = values.diameterPx;
+        $('opacity').value = values.opacity;
+        $('duration').value = values.durationSeconds;
+        $('color').value = values.colorHex;
+        $('timing').value = values.stepped ? 'steps' : 'linear';
+        $('diameterVal').textContent = values.diameterPx + ' px';
+        $('opacityVal').textContent = Number(values.opacity).toFixed(2);
+        $('durationVal').textContent = values.durationSeconds + ' с';
+      }
+
+      function readUI() {
+        values.diameterPx = Number($('diameter').value);
+        values.opacity = Number($('opacity').value);
+        values.durationSeconds = Number($('duration').value);
+        values.colorHex = $('color').value;
+        values.stepped = $('timing').value === 'steps';
+      }
+
+      async function init() {
+        try {
+          const s = await window.settingsApi.getSettings();
+          Object.assign(values, s);
+        } catch {}
+        syncUI();
+      }
+
+      $('diameter').addEventListener('input', () => { readUI(); syncUI(); });
+      $('opacity').addEventListener('input', () => { readUI(); syncUI(); });
+      $('duration').addEventListener('input', () => { readUI(); syncUI(); });
+      $('color').addEventListener('input', () => { readUI(); syncUI(); });
+      $('timing').addEventListener('change', () => { readUI(); syncUI(); });
+
+      $('apply').addEventListener('click', () => {
+        readUI();
+        window.settingsApi.updateSettings(values);
+      });
+      $('close').addEventListener('click', () => window.close());
+
+      init();
+    </script>
+  </body>
+  </html>
+
+
+
