@@ -25,9 +25,27 @@ function updateCounter(counters, modeId, minutes) {
 }
 
 /**
- * Получить отформатированное значение счетчика
+ * Получить отформатированное значение счетчика (для отображения)
  */
-function getFormattedCounter(counters, modeId) {
+function getFormattedCounter(displayCounters, modeId) {
+  const mode = getMode(modeId);
+  
+  if (!displayCounters || !displayCounters[modeId] || displayCounters[modeId].totalMinutes === 0) {
+    return mode.format(0);
+  }
+  
+  // Для саморазвития используем текущее значение напрямую
+  if (modeId === 'selfDevelopment' && typeof displayCounters[modeId].value === 'object') {
+    return mode.format(displayCounters[modeId].value);
+  }
+  
+  return mode.format(displayCounters[modeId].value);
+}
+
+/**
+ * Получить отформатированное значение статистики
+ */
+function getFormattedStats(counters, modeId) {
   const mode = getMode(modeId);
   
   if (!counters[modeId] || counters[modeId].totalMinutes === 0) {
@@ -73,17 +91,18 @@ function resetCounter(counters, modeId) {
 }
 
 /**
- * Сбросить все счетчики
+ * Сбросить все отображаемые счетчики (статистика не трогается)
  */
-function resetAllCounters(counters) {
+function resetDisplayCounters() {
   return {};
 }
 
 module.exports = {
   updateCounter,
   getFormattedCounter,
+  getFormattedStats,
   getAllFormattedCounters,
   resetCounter,
-  resetAllCounters
+  resetDisplayCounters
 };
 

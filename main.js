@@ -5,7 +5,7 @@ const { readSettings, writeSettings, isFirstRun } = require('./src/store/setting
 const { buildOverlayCssVariables } = require('./src/utils/style');
 const { createTrayIcon } = require('./src/utils/trayIcon');
 const { getMode, getAllModes } = require('./src/config/modes');
-const { updateCounter, getFormattedCounter, resetAllCounters } = require('./src/utils/counters');
+const { updateCounter, getFormattedCounter, getFormattedStats, resetDisplayCounters } = require('./src/utils/counters');
 
 let mainWindow = null;
 let settingsWindow = null;
@@ -18,9 +18,23 @@ let resetHotkeyRegistered = false;
 
 function getOverlayWidth() {
   if (!currentSettings) currentSettings = readSettings();
-  // Увеличиваем ширину для счетчика (примерно +40px для текста)
   const symbolSize = Math.max(10, Math.min(200, currentSettings.diameterPx || 60));
-  return symbolSize + 50; // Дополнительное место для счетчика
+  const level = currentSettings.level || 1;
+  
+  // Для уровня 3 (эксперт) нужно больше места: символ + цифры + единица измерения
+  if (level === 3) {
+    // Ширина символа + ширина цифр (до 4 цифр) + единица измерения + отступы
+    const textWidth = symbolSize * 0.6 + symbolSize * 0.7 * 4 + symbolSize * 0.5 + 20;
+    return Math.max(symbolSize, textWidth);
+  }
+  
+  // Для уровня 2 нужно место для цифр
+  if (level === 2) {
+    return symbolSize + 40; // Дополнительное место для цифр
+  }
+  
+  // Для уровня 1 (круг) достаточно размера круга
+  return symbolSize + 10; // Небольшой отступ
 }
 
 function updateWindowSize() {
@@ -140,17 +154,17 @@ async function applyOverlayStyles() {
         mainWindow.webContents.send('mode-updated', modeData);
       }
       
-      // Send current counter value
+      // Send current counter value (используем displayCounters для отображения)
       const { getFormattedCounter } = require('./src/utils/counters');
       const modeId = currentSettings.mode || 'money';
       const formatted = getFormattedCounter(
-        currentSettings.counters || {}, 
+        currentSettings.displayCounters || {}, 
         modeId
       );
       mainWindow.webContents.send('counter-updated', {
         mode: modeData,
         value: formatted,
-        counter: currentSettings.counters?.[modeId] || { value: 0, totalMinutes: 0 }
+        counter: currentSettings.displayCounters?.[modeId] || { value: 0, totalMinutes: 0 }
       });
     }
   } catch (err) {
@@ -271,10 +285,10 @@ function registerIpc() {
   ipcMain.handle('get-current-counter', () => {
     if (!currentSettings) currentSettings = readSettings();
     const modeId = currentSettings.mode || 'money';
-    if (currentSettings.counters && currentSettings.counters[modeId]) {
+    if (currentSettings.displayCounters && currentSettings.displayCounters[modeId] !== undefined) {
       return {
-        value: getFormattedCounter(currentSettings.counters, modeId),
-        counter: currentSettings.counters[modeId]
+        value: getFormattedCounter(currentSettings.displayCounters, modeId),
+        counter: currentSettings.displayCounters[modeId]
       };
     }
     return null;
@@ -309,6 +323,8 @@ function registerIpc() {
     // Send level update if changed
     if ('level' in patch) {
       const level = currentSettings.level || 1;
+      // Пересчитываем размер окна при изменении уровня
+      updateWindowSize();
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('level-updated', level);
         // При изменении уровня также отправляем режим и счетчик
@@ -328,13 +344,13 @@ function registerIpc() {
         const { getFormattedCounter } = require('./src/utils/counters');
         const modeId = currentSettings.mode || 'money';
         const formatted = getFormattedCounter(
-          currentSettings.counters || {},
+          currentSettings.displayCounters || {},
           modeId
         );
         mainWindow.webContents.send('counter-updated', {
           mode: modeData,
           value: formatted,
-          counter: currentSettings.counters?.[modeId] || { value: 0, totalMinutes: 0 }
+          counter: currentSettings.displayCounters?.[modeId] || { value: 0, totalMinutes: 0 }
         });
       }
     }
@@ -355,17 +371,17 @@ function registerIpc() {
       if (mainWindow && !mainWindow.isDestroyed()) {
         // Отправляем mode-updated для всех уровней
         mainWindow.webContents.send('mode-updated', modeData);
-        // Также отправляем counter-updated с текущим значением
+        // Также отправляем counter-updated с текущим значением (используем displayCounters)
         const { getFormattedCounter } = require('./src/utils/counters');
         const modeId = currentSettings.mode || 'money';
         const formatted = getFormattedCounter(
-          currentSettings.counters || {},
+          currentSettings.displayCounters || {},
           modeId
         );
         mainWindow.webContents.send('counter-updated', {
           mode: modeData,
           value: formatted,
-          counter: currentSettings.counters?.[modeId] || { value: 0, totalMinutes: 0 }
+          counter: currentSettings.displayCounters?.[modeId] || { value: 0, totalMinutes: 0 }
         });
       }
     }
@@ -385,6 +401,7 @@ function startCounterTimer() {
   
   if (!currentSettings) currentSettings = readSettings();
   if (!currentSettings.counters) currentSettings.counters = {};
+  if (!currentSettings.displayCounters) currentSettings.displayCounters = {};
   
   cycleStartTime = Date.now();
   
@@ -392,26 +409,49 @@ function startCounterTimer() {
   counterInterval = setInterval(() => {
     if (!currentSettings || !mainWindow || mainWindow.isDestroyed()) return;
     
-    const mode = getMode(currentSettings.mode || 'money');
+    const modeId = currentSettings.mode || 'money';
+    const mode = getMode(modeId);
     const elapsedMinutes = 1; // Каждый цикл = 1 минута
     
-    // Обновляем счетчик
-    updateCounter(currentSettings.counters, currentSettings.mode, elapsedMinutes);
+    // Обновляем статистику (накапливается, не сбрасывается)
+    updateCounter(currentSettings.counters, modeId, elapsedMinutes);
+    
+    // Обновляем отображаемый счетчик (сбрасывается при нажатии горячей клавиши)
+    if (!currentSettings.displayCounters[modeId]) {
+      currentSettings.displayCounters[modeId] = { value: 0, totalMinutes: 0 };
+    }
+    const currentDisplayTotalMinutes = (currentSettings.displayCounters[modeId].totalMinutes || 0) + elapsedMinutes;
+    const newDisplayValue = mode.formula(currentDisplayTotalMinutes);
+    if (typeof newDisplayValue === 'object' && newDisplayValue.xp !== undefined) {
+      currentSettings.displayCounters[modeId].value = newDisplayValue;
+    } else {
+      currentSettings.displayCounters[modeId].value = newDisplayValue;
+    }
+    currentSettings.displayCounters[modeId].totalMinutes = currentDisplayTotalMinutes;
     
     // Сохраняем настройки
     currentSettings = writeSettings(currentSettings);
     
-    // Отправляем обновление в overlay
+    // Отправляем обновление в overlay (используем displayCounters)
     if (mainWindow && !mainWindow.isDestroyed()) {
-      const formatted = getFormattedCounter(currentSettings.counters, currentSettings.mode);
+      const formatted = getFormattedCounter(currentSettings.displayCounters, modeId);
+      const modeData = {
+        id: mode.id,
+        name: mode.name,
+        emoji: mode.emoji,
+        symbol: mode.symbol,
+        color: mode.color,
+        unit: mode.unit,
+        description: mode.description
+      };
       mainWindow.webContents.send('counter-updated', {
-        mode: currentSettings.mode,
+        mode: modeData,
         value: formatted,
-        counter: currentSettings.counters[currentSettings.mode]
+        counter: currentSettings.displayCounters[modeId] || { value: 0, totalMinutes: 0 }
       });
     }
     
-    // Отправляем обновление в settings window
+    // Отправляем обновление в settings window (используем counters для статистики)
     if (settingsWindow && !settingsWindow.isDestroyed()) {
       settingsWindow.webContents.send('counters-updated', currentSettings.counters);
     }
@@ -435,8 +475,8 @@ function registerResetHotkey() {
     const registered = globalShortcut.register(hotkey, () => {
       if (!currentSettings) currentSettings = readSettings();
 
-      // Сбрасываем все счетчики
-      currentSettings.counters = resetAllCounters(currentSettings.counters || {});
+      // Сбрасываем только отображаемые счетчики (статистика не трогается)
+      currentSettings.displayCounters = resetDisplayCounters();
       currentSettings = writeSettings(currentSettings);
       
       // Сбрасываем время начала цикла, чтобы счетчик инкрементировался в начале следующего цикла
@@ -449,7 +489,7 @@ function registerResetHotkey() {
       if (mainWindow && !mainWindow.isDestroyed()) {
         const { getFormattedCounter } = require('./src/utils/counters');
         const modeId = currentSettings.mode || 'money';
-        const formatted = getFormattedCounter(currentSettings.counters, modeId);
+        const formatted = getFormattedCounter(currentSettings.displayCounters || {}, modeId);
         const mode = getMode(modeId);
         const modeData = {
           id: mode.id,
@@ -463,11 +503,11 @@ function registerResetHotkey() {
         mainWindow.webContents.send('counter-updated', {
           mode: modeData,
           value: formatted,
-          counter: currentSettings.counters[modeId] || { value: 0, totalMinutes: 0 }
+          counter: currentSettings.displayCounters?.[modeId] || 0
         });
       }
       
-      // Обновляем settings window
+      // Обновляем settings window (статистика не меняется)
       if (settingsWindow && !settingsWindow.isDestroyed()) {
         settingsWindow.webContents.send('counters-updated', currentSettings.counters);
       }

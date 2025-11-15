@@ -104,6 +104,9 @@
     "compression": "maximum",
     "asar": true,
     "asarUnpack": [],
+    "extraMetadata": {
+      "main": "main.js"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

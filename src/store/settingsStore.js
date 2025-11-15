@@ -12,7 +12,8 @@ const DEFAULT_SETTINGS = {
   autostart: false,
   showTray: true,
   mode: getDefaultMode(), // Режим мотивации
-  counters: {}, // Счетчики по режимам: { modeId: { value, totalMinutes } }
+  counters: {}, // Статистика по режимам: { modeId: { value, totalMinutes } } - накапливается, не сбрасывается
+  displayCounters: {}, // Отображаемые счетчики: { modeId: value } - сбрасываются при нажатии горячей клавиши
   level: 1, // Уровень отображения: 1 - базовый (круг), 2 - продвинутый (цифры), 3 - эксперт (символ+цифры+единица)
   levelSettings: {
     1: { showCircle: true, showSymbol: false, showCounter: false, showUnit: false },

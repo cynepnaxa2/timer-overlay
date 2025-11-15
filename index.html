@@ -67,24 +67,21 @@
         text-align: center;
         line-height: 1;
       }
-      /* Уровень 3 - Эксперт: символ + цифры + единица */
+      /* Уровень 3 - Эксперт: символ + цифры рядом горизонтально */
+      .symbol-container.expert {
+        flex-direction: row;
+        align-items: center;
+        gap: 4px;
+      }
       .symbol {
-        position: absolute;
-        width: 100%;
-        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: calc(var(--dot-size) * 0.8);
-        opacity: 0.3;
-        z-index: 1;
+        font-size: calc(var(--dot-size) * 0.6);
+        line-height: 1;
       }
       .counter {
-        position: absolute;
-        width: 100%;
-        height: 100%;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
         font-size: calc(var(--dot-size) * 0.7);
@@ -92,17 +89,15 @@
         font-weight: 900;
         text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.5);
         white-space: nowrap;
-        text-align: center;
-        z-index: 2;
-        line-height: 1.2;
-        gap: 2px;
+        line-height: 1;
       }
       .counter-value {
-        font-size: calc(var(--dot-size) * 0.9);
+        font-size: calc(var(--dot-size) * 0.7);
       }
       .counter-unit {
-        font-size: calc(var(--dot-size) * 0.4);
+        font-size: calc(var(--dot-size) * 0.5);
         opacity: 0.8;
+        margin-left: 2px;
       }
       @keyframes rise {
         from { top: calc(100% - var(--dot-size)); }
@@ -158,7 +153,11 @@
             counterOnlyEl.textContent = '0';
           }
         } else if (currentLevel === 3) {
-          // Уровень 3: Эксперт - символ + цифры + единица
+          // Уровень 3: Эксперт - символ + цифры рядом горизонтально
+          const container = document.querySelector('.symbol-container');
+          if (container) {
+            container.classList.add('expert');
+          }
           if (mode) {
             symbolEl.style.display = 'flex';
             symbolEl.textContent = mode.emoji || mode.symbol || '💵';
@@ -171,12 +170,22 @@
             }
             if (mode && mode.unit) {
               counterUnitEl.textContent = mode.unit;
+            } else {
+              counterUnitEl.textContent = '';
             }
           } else {
             counterValueEl.textContent = '0';
             if (mode && mode.unit) {
               counterUnitEl.textContent = mode.unit;
+            } else {
+              counterUnitEl.textContent = '';
             }
+          }
+        } else {
+          // Убираем класс expert для других уровней
+          const container = document.querySelector('.symbol-container');
+          if (container) {
+            container.classList.remove('expert');
           }
         }
       }
@@ -188,6 +197,8 @@
           symbolEl.textContent = mode.emoji || mode.symbol || '💵';
           if (mode.unit) {
             counterUnitEl.textContent = mode.unit;
+          } else {
+            counterUnitEl.textContent = '';
           }
         }
       }
