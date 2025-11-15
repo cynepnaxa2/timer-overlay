@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('overlayApi', {
   getMode: () => ipcRenderer.invoke('get-mode'),
+  getCurrentCounter: () => ipcRenderer.invoke('get-current-counter'),
   onCounterUpdated: (callback) => {
     ipcRenderer.on('counter-updated', (_event, data) => callback(data));
   },

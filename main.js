@@ -126,14 +126,16 @@ async function applyOverlayStyles() {
       
       // Send current counter value
       const { getFormattedCounter } = require('./src/utils/counters');
-      if (currentSettings.counters && currentSettings.counters[currentSettings.mode]) {
-        const formatted = getFormattedCounter(currentSettings.counters, currentSettings.mode);
-        mainWindow.webContents.send('counter-updated', {
-          mode: currentSettings.mode,
-          value: formatted,
-          counter: currentSettings.counters[currentSettings.mode]
-        });
-      }
+      const modeId = currentSettings.mode || 'money';
+      const formatted = getFormattedCounter(
+        currentSettings.counters || {}, 
+        modeId
+      );
+      mainWindow.webContents.send('counter-updated', {
+        mode: modeId,
+        value: formatted,
+        counter: currentSettings.counters?.[modeId] || { value: 0, totalMinutes: 0 }
+      });
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -233,6 +235,23 @@ function registerIpc() {
     } catch {
       return false;
     }
+  });
+  
+  ipcMain.handle('get-mode', () => {
+    if (!currentSettings) currentSettings = readSettings();
+    return getMode(currentSettings.mode || 'money');
+  });
+  
+  ipcMain.handle('get-current-counter', () => {
+    if (!currentSettings) currentSettings = readSettings();
+    const modeId = currentSettings.mode || 'money';
+    if (currentSettings.counters && currentSettings.counters[modeId]) {
+      return {
+        value: getFormattedCounter(currentSettings.counters, modeId),
+        counter: currentSettings.counters[modeId]
+      };
+    }
+    return null;
   });
   
   ipcMain.on('update-settings', async (_event, patch) => {

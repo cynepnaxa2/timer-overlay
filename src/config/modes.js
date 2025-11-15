@@ -12,7 +12,7 @@ const MODES = {
     color: '#00C853', // Зеленый
     unit: '$',
     formula: (totalMinutes) => totalMinutes, // +$1 за минуту
-    format: (value) => `$${value}`,
+    format: (value) => value,
     description: 'Каждая минута = +$1'
   },
   
@@ -24,7 +24,7 @@ const MODES = {
     color: '#E91E63', // Розовый/Красный
     unit: '👍',
     formula: (totalMinutes) => totalMinutes, // +1 лайк за минуту
-    format: (value) => `👍 ${value}`,
+    format: (value) => value,
     description: 'Каждая минута = +1 лайк'
   },
   
@@ -42,12 +42,11 @@ const MODES = {
     },
     format: (value) => {
       if (typeof value === 'object' && value.xp !== undefined) {
-        return `Level ${value.level} (XP: ${value.xp})`;
+        return value.level;
       }
       // Fallback для числового значения
       const level = Math.floor((value || 0) / 60) + 1;
-      const xp = value || 0;
-      return `Level ${level} (XP: ${xp})`;
+      return level;
     },
     description: 'Каждая минута = +1 XP, каждые 60 XP = +1 уровень'
   },
@@ -60,7 +59,7 @@ const MODES = {
     color: '#FF6F00', // Оранжевый
     unit: 'Очков успеха',
     formula: (totalMinutes) => totalMinutes, // +1 очко за минуту
-    format: (value) => `Очков успеха: ${value}`,
+    format: (value) => value,
     description: 'Каждая минута = +1 очко успеха'
   },
   
@@ -72,7 +71,7 @@ const MODES = {
     color: '#00BCD4', // Бирюзовый
     unit: 'мин',
     formula: (totalMinutes) => -totalMinutes, // -1 минута возраста за минуту работы
-    format: (value) => `-${Math.abs(value)} мин`,
+    format: (value) => Math.abs(value),
     description: 'Каждая минута = -1 минута возраста (помолодел)'
   },
   
@@ -84,7 +83,7 @@ const MODES = {
     color: '#2E7D32', // Темно-зеленый
     unit: 'г',
     formula: (totalMinutes) => totalMinutes, // +1 грамм мышц за минуту
-    format: (value) => `+${value} г`,
+    format: (value) => value,
     description: 'Каждая минута = +1 грамм мышц'
   },
   
@@ -96,7 +95,7 @@ const MODES = {
     color: '#9C27B0', // Фиолетовый
     unit: 'Мастерство',
     formula: (totalMinutes) => totalMinutes, // +1 единица мастерства за минуту
-    format: (value) => `Мастерство: ${value}`,
+    format: (value) => value,
     description: 'Каждая минута = +1 единица мастерства'
   },
   
@@ -108,7 +107,7 @@ const MODES = {
     color: '#1E88E5', // Синий
     unit: 'Знаний',
     formula: (totalMinutes) => totalMinutes, // +1 знание за минуту
-    format: (value) => `Знаний: ${value}`,
+    format: (value) => value,
     description: 'Каждая минута = +1 знание'
   }
 };
