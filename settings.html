@@ -162,6 +162,45 @@
         color: #666;
         margin-left: 4px;
       }
+      .mode-description {
+        font-size: 12px;
+        color: #666;
+        margin-top: 8px;
+        padding: 8px;
+        background: #f9f9f9;
+        border-radius: 4px;
+      }
+      .total-counter {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .counter-item {
+        padding: 12px;
+        background: #f9f9f9;
+        border-radius: 6px;
+        border-left: 3px solid #0078d4;
+      }
+      .counter-item-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 6px;
+        color: #333;
+      }
+      .counter-item-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0078d4;
+        margin-bottom: 4px;
+      }
+      .counter-item-time {
+        font-size: 11px;
+        color: #666;
+      }
     </style>
   </head>
   <body>
@@ -179,6 +218,22 @@
           <input id="showTray" type="checkbox">
           <label for="showTray">Показывать иконку в системном трее</label>
         </div>
+      </div>
+
+      <!-- Режим мотивации -->
+      <div class="section">
+        <div class="section-title">Зачем будем сейчас работать?</div>
+        <div class="row">
+          <label for="mode">Выберите режим мотивации:</label>
+          <select id="mode"></select>
+        </div>
+        <div id="modeDescription" class="mode-description"></div>
+      </div>
+
+      <!-- Суммарный счетчик -->
+      <div class="section">
+        <div class="section-title">Ваша статистика</div>
+        <div id="totalCounter" class="total-counter"></div>
       </div>
 
       <!-- Превью -->
@@ -251,8 +306,12 @@
         durationSeconds: 60,
         stepped: false,
         autostart: false,
-        showTray: true
+        showTray: true,
+        mode: 'money',
+        counters: {}
       };
+      
+      let allModes = [];
 
       function updatePreview() {
         const circle = $('previewCircle');
@@ -271,6 +330,87 @@
         circle.style.boxShadow = `0 0 10px rgba(${r}, ${g}, ${b}, 0.7)`;
       }
 
+      function loadModes() {
+        // Загружаем режимы через IPC (будет реализовано в main.js)
+        // Пока используем статический список
+        allModes = [
+          { id: 'money', name: 'Деньги', emoji: '💵', description: 'Каждая минута = +$1' },
+          { id: 'popularity', name: 'Популярность', emoji: '👍', description: 'Каждая минута = +1 лайк' },
+          { id: 'selfDevelopment', name: 'Саморазвитие', emoji: '⬆️', description: 'Каждая минута = +1 XP, каждые 60 XP = +1 уровень' },
+          { id: 'success', name: 'Успех', emoji: '🚀', description: 'Каждая минута = +1 очко успеха' },
+          { id: 'health', name: 'Здоровье', emoji: '⏰', description: 'Каждая минута = -1 минута возраста (помолодел)' },
+          { id: 'sport', name: 'Спорт', emoji: '💪', description: 'Каждая минута = +1 грамм мышц' },
+          { id: 'creativity', name: 'Творчество', emoji: '🎨', description: 'Каждая минута = +1 единица мастерства' },
+          { id: 'learning', name: 'Обучение', emoji: '📚', description: 'Каждая минута = +1 знание' }
+        ];
+        
+        const modeSelect = $('mode');
+        modeSelect.innerHTML = '';
+        allModes.forEach(mode => {
+          const option = document.createElement('option');
+          option.value = mode.id;
+          option.textContent = `${mode.emoji} ${mode.name}`;
+          modeSelect.appendChild(option);
+        });
+      }
+      
+      function updateModeDescription() {
+        const selectedMode = allModes.find(m => m.id === values.mode);
+        if (selectedMode) {
+          $('modeDescription').textContent = selectedMode.description;
+        }
+      }
+      
+      function updateTotalCounter() {
+        const container = $('totalCounter');
+        container.innerHTML = '';
+        
+        if (!values.counters || Object.keys(values.counters).length === 0) {
+          container.innerHTML = '<div style="color: #666; font-size: 12px;">Статистика появится после начала работы</div>';
+          return;
+        }
+        
+        allModes.forEach(mode => {
+          const counter = values.counters[mode.id];
+          if (!counter || counter.totalMinutes === 0) return;
+          
+          const item = document.createElement('div');
+          item.className = 'counter-item';
+          
+          const header = document.createElement('div');
+          header.className = 'counter-item-header';
+          header.innerHTML = `${mode.emoji} ${mode.name}`;
+          
+          const value = document.createElement('div');
+          value.className = 'counter-item-value';
+          // Форматирование значения в зависимости от режима
+          if (mode.id === 'selfDevelopment' && typeof counter.value === 'object') {
+            value.textContent = `Level ${counter.value.level} (XP: ${counter.value.xp})`;
+          } else if (mode.id === 'health') {
+            value.textContent = `-${Math.abs(counter.value)} мин`;
+          } else if (mode.id === 'sport') {
+            value.textContent = `+${counter.value} г`;
+          } else if (mode.id === 'money') {
+            value.textContent = `$${counter.value}`;
+          } else if (mode.id === 'popularity') {
+            value.textContent = `👍 ${counter.value}`;
+          } else {
+            value.textContent = counter.value || 0;
+          }
+          
+          const time = document.createElement('div');
+          time.className = 'counter-item-time';
+          const hours = Math.floor(counter.totalMinutes / 60);
+          const minutes = counter.totalMinutes % 60;
+          time.textContent = `Время работы: ${hours > 0 ? hours + 'ч ' : ''}${minutes}мин`;
+          
+          item.appendChild(header);
+          item.appendChild(value);
+          item.appendChild(time);
+          container.appendChild(item);
+        });
+      }
+      
       function syncUI() {
         $('diameter').value = values.diameterPx;
         $('diameterText').value = values.diameterPx;
@@ -282,6 +422,9 @@
         $('timing').value = values.stepped ? 'steps' : 'linear';
         $('autostart').checked = values.autostart;
         $('showTray').checked = values.showTray !== false;
+        $('mode').value = values.mode || 'money';
+        updateModeDescription();
+        updateTotalCounter();
         updatePreview();
       }
 
@@ -293,6 +436,7 @@
         values.stepped = $('timing').value === 'steps';
         values.autostart = $('autostart').checked;
         values.showTray = $('showTray').checked;
+        values.mode = $('mode').value;
       }
 
       function syncFromSlider(id, textId, min, max) {
@@ -320,6 +464,7 @@
       }
 
       async function init() {
+        loadModes();
         try {
           const s = await window.settingsApi.getSettings();
           Object.assign(values, s);
@@ -327,8 +472,20 @@
           try {
             values.autostart = await window.settingsApi.getAutostart();
           } catch {}
+          // Ensure counters object exists
+          if (!values.counters) {
+            values.counters = {};
+          }
         } catch {}
         syncUI();
+        
+        // Listen for counter updates
+        if (window.settingsApi && window.settingsApi.onCountersUpdated) {
+          window.settingsApi.onCountersUpdated((counters) => {
+            values.counters = counters;
+            updateTotalCounter();
+          });
+        }
       }
 
       // Sync sliders and text inputs
@@ -340,6 +497,7 @@
       $('timing').addEventListener('change', () => { readUI(); syncUI(); });
       $('autostart').addEventListener('change', () => { readUI(); syncUI(); });
       $('showTray').addEventListener('change', () => { readUI(); syncUI(); });
+      $('mode').addEventListener('change', () => { readUI(); syncUI(); });
 
       $('apply').addEventListener('click', async () => {
         readUI();

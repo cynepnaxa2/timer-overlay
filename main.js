@@ -4,16 +4,22 @@ const { computeWindowBoundsForRightEdge } = require('./src/utils/positioning');
 const { readSettings, writeSettings, isFirstRun } = require('./src/store/settingsStore');
 const { buildOverlayCssVariables } = require('./src/utils/style');
 const { createTrayIcon } = require('./src/utils/trayIcon');
+const { getMode, getAllModes } = require('./src/config/modes');
+const { updateCounter, getFormattedCounter } = require('./src/utils/counters');
 
 let mainWindow = null;
 let settingsWindow = null;
 let tray = null;
 let overlayCssKey = null;
 let currentSettings = null;
+let counterInterval = null;
+let cycleStartTime = null;
 
 function getOverlayWidth() {
   if (!currentSettings) currentSettings = readSettings();
-  return Math.max(10, Math.min(200, currentSettings.diameterPx || 60));
+  // Увеличиваем ширину для счетчика (примерно +40px для текста)
+  const symbolSize = Math.max(10, Math.min(200, currentSettings.diameterPx || 60));
+  return symbolSize + 50; // Дополнительное место для счетчика
 }
 
 function updateWindowSize() {
@@ -54,7 +60,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      devTools: false
+      devTools: false,
+      preload: path.join(__dirname, 'preload', 'overlayPreload.js')
     }
   });
 
@@ -111,6 +118,23 @@ async function applyOverlayStyles() {
     // Apply new CSS
     const css = buildOverlayCssVariables(currentSettings);
     overlayCssKey = await mainWindow.webContents.insertCSS(css);
+    
+    // Send mode update to overlay
+    const mode = getMode(currentSettings.mode || 'money');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('mode-updated', mode);
+      
+      // Send current counter value
+      const { getFormattedCounter } = require('./src/utils/counters');
+      if (currentSettings.counters && currentSettings.counters[currentSettings.mode]) {
+        const formatted = getFormattedCounter(currentSettings.counters, currentSettings.mode);
+        mainWindow.webContents.send('counter-updated', {
+          mode: currentSettings.mode,
+          value: formatted,
+          counter: currentSettings.counters[currentSettings.mode]
+        });
+      }
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to apply overlay styles:', err);
@@ -213,6 +237,7 @@ function registerIpc() {
   
   ipcMain.on('update-settings', async (_event, patch) => {
     if (!currentSettings) currentSettings = readSettings();
+    const durationChanged = 'durationSeconds' in patch;
     currentSettings = writeSettings({ ...currentSettings, ...patch });
     await applyOverlayStyles();
     
@@ -226,11 +251,65 @@ function registerIpc() {
       updateTrayVisibility();
     }
     
+    // Restart counter timer if duration changed
+    if (durationChanged) {
+      startCounterTimer();
+    }
+    
+    // Send mode update if changed
+    if ('mode' in patch) {
+      const mode = getMode(currentSettings.mode);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('mode-updated', mode);
+      }
+    }
+    
     // Notify settings window that update succeeded
     if (settingsWindow && !settingsWindow.isDestroyed()) {
       settingsWindow.webContents.send('settings-updated');
+      settingsWindow.webContents.send('counters-updated', currentSettings.counters);
     }
   });
+}
+
+function startCounterTimer() {
+  if (counterInterval) {
+    clearInterval(counterInterval);
+  }
+  
+  if (!currentSettings) currentSettings = readSettings();
+  if (!currentSettings.counters) currentSettings.counters = {};
+  
+  cycleStartTime = Date.now();
+  
+  // Обновляем счетчик каждую минуту
+  counterInterval = setInterval(() => {
+    if (!currentSettings || !mainWindow || mainWindow.isDestroyed()) return;
+    
+    const mode = getMode(currentSettings.mode || 'money');
+    const elapsedMinutes = 1; // Каждый цикл = 1 минута
+    
+    // Обновляем счетчик
+    updateCounter(currentSettings.counters, currentSettings.mode, elapsedMinutes);
+    
+    // Сохраняем настройки
+    currentSettings = writeSettings(currentSettings);
+    
+    // Отправляем обновление в overlay
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      const formatted = getFormattedCounter(currentSettings.counters, currentSettings.mode);
+      mainWindow.webContents.send('counter-updated', {
+        mode: currentSettings.mode,
+        value: formatted,
+        counter: currentSettings.counters[currentSettings.mode]
+      });
+    }
+    
+    // Отправляем обновление в settings window
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('counters-updated', currentSettings.counters);
+    }
+  }, currentSettings.durationSeconds * 1000); // Интервал = длительность цикла
 }
 
 app.whenReady().then(() => {
@@ -246,6 +325,9 @@ app.whenReady().then(() => {
   
   createWindow();
   createTray();
+  
+  // Start counter timer
+  startCounterTimer();
   
   // Show settings on first run
   if (isFirstRun()) {

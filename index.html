@@ -27,16 +27,45 @@
         position: relative;
         width: 100%;
         height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 4px;
       }
-      .dot {
+      .symbol-container {
         position: absolute;
         right: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        animation: rise var(--duration) var(--timing) infinite;
+      }
+      .symbol {
         width: var(--dot-size);
         height: var(--dot-size);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--dot-size) * 0.7);
         border-radius: 50%;
-        background: var(--dot-color); /* bright semi-transparent red */
-        box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
-        animation: rise var(--duration) var(--timing) infinite;
+        background: var(--dot-color);
+        box-shadow: 0 0 10px var(--shadow-color);
+        color: white;
+        text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+      }
+      .counter {
+        font-size: 10px;
+        color: var(--counter-color);
+        font-weight: 700;
+        text-shadow: 0 0 3px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.9);
+        white-space: nowrap;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 3px 8px;
+        border-radius: 6px;
+        min-width: 50px;
+        text-align: center;
+        backdrop-filter: blur(4px);
       }
       @keyframes rise {
         from { top: calc(100% - var(--dot-size)); }
@@ -46,12 +75,50 @@
   </head>
   <body>
     <div id="overlay">
-      <div class="dot"></div>
+      <div class="symbol-container">
+        <div class="symbol" id="symbol">💵</div>
+        <div class="counter" id="counter">$0</div>
+      </div>
     </div>
     <script>
-      // Restart animation when CSS variables change
-      const dot = document.querySelector('.dot');
+      const symbolEl = document.getElementById('symbol');
+      const counterEl = document.getElementById('counter');
+      const container = document.querySelector('.symbol-container');
+      let currentMode = 'money';
       let lastVars = '';
+      
+      // Получаем режим и счетчик при загрузке
+      if (window.overlayApi) {
+        window.overlayApi.getMode().then(mode => {
+          if (mode) {
+            currentMode = mode.id;
+            symbolEl.textContent = mode.emoji || mode.symbol || '💵';
+            // Устанавливаем начальное значение счетчика
+            counterEl.textContent = mode.format(0);
+          }
+        }).catch(() => {});
+        
+        // Обновление счетчика
+        window.overlayApi.onCounterUpdated((data) => {
+          if (data && data.value) {
+            counterEl.textContent = data.value;
+          }
+        });
+        
+        // Обновление режима
+        window.overlayApi.onModeUpdated((mode) => {
+          if (mode) {
+            currentMode = mode.id;
+            symbolEl.textContent = mode.emoji || mode.symbol || '💵';
+            // Сбрасываем счетчик при смене режима (или показываем текущий)
+            counterEl.textContent = mode.format(0);
+          }
+        });
+      } else {
+        // Fallback если API не загружен
+        symbolEl.textContent = '💵';
+        counterEl.textContent = '$0';
+      }
       
       function checkAndUpdate() {
         const computed = getComputedStyle(document.documentElement);
@@ -65,9 +132,9 @@
         if (current !== lastVars) {
           lastVars = current;
           // Force animation restart
-          dot.style.animation = 'none';
+          container.style.animation = 'none';
           requestAnimationFrame(() => {
-            dot.style.animation = '';
+            container.style.animation = '';
           });
         }
       }

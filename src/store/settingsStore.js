@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
+const { getDefaultMode } = require('../config/modes');
 
 const DEFAULT_SETTINGS = {
   diameterPx: 60,
@@ -9,7 +10,9 @@ const DEFAULT_SETTINGS = {
   durationSeconds: 60,
   stepped: false,
   autostart: false,
-  showTray: true
+  showTray: true,
+  mode: getDefaultMode(), // Режим мотивации
+  counters: {} // Счетчики по режимам: { modeId: { value, totalMinutes } }
 };
 
 function getSettingsPath() {

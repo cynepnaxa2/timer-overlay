@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('settingsApi', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   getAutostart: () => ipcRenderer.invoke('get-autostart'),
+  getModes: () => ipcRenderer.invoke('get-modes'),
   updateSettings: (settings) => {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -18,6 +19,9 @@ contextBridge.exposeInMainWorld('settingsApi', {
       ipcRenderer.once('settings-updated', handler);
       ipcRenderer.send('update-settings', settings);
     });
+  },
+  onCountersUpdated: (callback) => {
+    ipcRenderer.on('counters-updated', (_event, counters) => callback(counters));
   }
 });
 
