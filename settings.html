@@ -119,9 +119,73 @@
         min-height: 150px;
         margin-top: 12px;
       }
+      .preview-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100px;
+        position: relative;
+      }
       .preview-circle {
+        width: 60px;
+        height: 60px;
         border-radius: 50%;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 0, 0, 0.55);
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+        margin: 0 auto;
+      }
+      .preview-counter-only {
+        font-size: 48px;
+        font-weight: 900;
+        color: rgba(255, 0, 0, 0.9);
+        text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.5);
+        text-align: center;
+      }
+      .preview-expert {
+        position: relative;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .preview-symbol {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        opacity: 0.3;
+        z-index: 1;
+      }
+      .preview-counter-container {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        gap: 2px;
+      }
+      .preview-counter-value {
+        font-size: 24px;
+        font-weight: 900;
+        color: rgba(255, 0, 0, 0.9);
+        text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.5);
+        line-height: 1;
+      }
+      .preview-counter-unit {
+        font-size: 12px;
+        font-weight: 700;
+        color: rgba(255, 0, 0, 0.8);
+        text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+        opacity: 0.8;
+        line-height: 1;
+      }
         transition: all 0.2s ease;
       }
       .actions {
@@ -201,6 +265,50 @@
         font-size: 11px;
         color: #666;
       }
+      .level-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .level-option {
+        display: flex;
+        align-items: flex-start;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .level-option:hover {
+        border-color: #0078d4;
+        background: #f0f8ff;
+      }
+      .level-option input[type="radio"] {
+        margin-right: 12px;
+        margin-top: 2px;
+        cursor: pointer;
+      }
+      .level-option input[type="radio"]:checked + .level-content {
+        color: #0078d4;
+      }
+      .level-option:has(input[type="radio"]:checked) {
+        border-color: #0078d4;
+        background: #e6f3ff;
+      }
+      .level-content {
+        flex: 1;
+      }
+      .level-title {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .level-description {
+        font-size: 12px;
+        color: #666;
+        line-height: 1.4;
+      }
     </style>
   </head>
   <body>
@@ -220,8 +328,36 @@
         </div>
       </div>
 
-      <!-- Режим мотивации -->
+      <!-- Уровни отображения -->
       <div class="section">
+        <div class="section-title">Уровень отображения</div>
+        <div class="level-selector">
+          <label class="level-option">
+            <input type="radio" name="level" value="1" id="level1">
+            <div class="level-content">
+              <div class="level-title">1. Базовый</div>
+              <div class="level-description">Круг. Рекомендуется всем, кто начинает с этим работать.</div>
+            </div>
+          </label>
+          <label class="level-option">
+            <input type="radio" name="level" value="2" id="level2">
+            <div class="level-content">
+              <div class="level-title">2. Продвинутый</div>
+              <div class="level-description">Счетчик. Когда освоились с базой, может демотивировать.</div>
+            </div>
+          </label>
+          <label class="level-option">
+            <input type="radio" name="level" value="3" id="level3">
+            <div class="level-content">
+              <div class="level-title">3. Эксперт</div>
+              <div class="level-description">Счетчик и мотивация зачем работаем.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Режим мотивации (только для уровня 3) -->
+      <div class="section" id="motivationSection" style="display: none;">
         <div class="section-title">Зачем будем сейчас работать?</div>
         <div class="row">
           <label for="mode">Выберите режим мотивации:</label>
@@ -230,8 +366,8 @@
         <div id="modeDescription" class="mode-description"></div>
       </div>
 
-      <!-- Суммарный счетчик -->
-      <div class="section">
+      <!-- Суммарный счетчик (только для уровня 3) -->
+      <div class="section" id="statisticsSection" style="display: none;">
         <div class="section-title">Ваша статистика</div>
         <div id="totalCounter" class="total-counter"></div>
       </div>
@@ -240,16 +376,27 @@
       <div class="section">
         <div class="section-title">Предпросмотр</div>
         <div class="preview-container">
-          <div id="previewCircle" class="preview-circle"></div>
+          <!-- Уровень 1: Круг -->
+          <div id="previewCircle" class="preview-circle" style="display: none;"></div>
+          <!-- Уровень 2: Только цифры -->
+          <div id="previewCounterOnly" class="preview-counter-only" style="display: none;">0</div>
+          <!-- Уровень 3: Символ + цифры + единица -->
+          <div id="previewExpert" class="preview-expert" style="display: none;">
+            <div class="preview-symbol" id="previewSymbol">💵</div>
+            <div class="preview-counter-container">
+              <div class="preview-counter-value" id="previewCounterValue">0</div>
+              <div class="preview-counter-unit" id="previewCounterUnit">$</div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Внешний вид -->
       <div class="section">
-        <div class="section-title">Внешний вид</div>
+        <div class="section-title">ВНЕШНИЙ ВИД</div>
         
         <div class="row">
-          <label for="diameter">Размер круга<span class="unit">(10-200 пикселей)</span></label>
+          <label for="diameter">Размер</label>
           <div class="input-group">
             <input id="diameter" type="range" min="10" max="200" step="1">
             <input id="diameterText" type="number" min="10" max="200" step="1">
@@ -257,7 +404,7 @@
         </div>
 
         <div class="row">
-          <label for="opacity">Прозрачность<span class="unit">(0.1-1.0)</span></label>
+          <label for="opacity">Прозрачность</label>
           <div class="input-group">
             <input id="opacity" type="range" min="0.1" max="1" step="0.01">
             <input id="opacityText" type="number" min="0.1" max="1" step="0.01">
@@ -265,7 +412,7 @@
         </div>
 
         <div class="row">
-          <label for="color">Цвет круга</label>
+          <label for="color">Цвет</label>
           <input id="color" type="color">
         </div>
       </div>
@@ -291,6 +438,19 @@
         </div>
       </div>
 
+      <!-- Горячие клавиши -->
+      <div class="section">
+        <div class="section-title">Горячие клавиши</div>
+        
+        <div class="row">
+          <label for="resetHotkey">Сброс счетчиков:</label>
+          <input id="resetHotkey" type="text" placeholder="Ctrl+Shift+R" style="width: 200px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+          <div style="font-size: 11px; color: #666; margin-top: 4px;">
+            Нажмите комбинацию клавиш для установки. Формат: Ctrl+Shift+R, Alt+F1 и т.д.
+          </div>
+        </div>
+      </div>
+
       <div class="actions">
         <button id="close">Закрыть</button>
         <button id="apply">Применить</button>
@@ -308,13 +468,15 @@
         autostart: false,
         showTray: true,
         mode: 'money',
-        counters: {}
+        counters: {},
+        level: 1,
+        resetHotkey: 'Ctrl+Shift+R'
       };
       
       let allModes = [];
 
       function updatePreview() {
-        const circle = $('previewCircle');
+        const level = values.level || 1;
         const size = Math.max(10, Math.min(200, values.diameterPx || 60));
         const opacity = Math.max(0.1, Math.min(1, values.opacity || 0.55));
         const color = values.colorHex || '#ff0000';
@@ -324,24 +486,66 @@
         const g = parseInt(color.slice(3, 5), 16);
         const b = parseInt(color.slice(5, 7), 16);
         
-        circle.style.width = size + 'px';
-        circle.style.height = size + 'px';
-        circle.style.background = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-        circle.style.boxShadow = `0 0 10px rgba(${r}, ${g}, ${b}, 0.7)`;
+        // Скрываем все превью
+        $('previewCircle').style.display = 'none';
+        $('previewCounterOnly').style.display = 'none';
+        $('previewExpert').style.display = 'none';
+        
+        if (level === 1) {
+          // Уровень 1: Круг
+          const circle = $('previewCircle');
+          circle.style.display = 'block';
+          circle.style.width = size + 'px';
+          circle.style.height = size + 'px';
+          circle.style.background = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+          circle.style.boxShadow = `0 0 10px rgba(${r}, ${g}, ${b}, 0.7)`;
+        } else if (level === 2) {
+          // Уровень 2: Только цифры
+          const counterOnly = $('previewCounterOnly');
+          counterOnly.style.display = 'block';
+          counterOnly.style.fontSize = (size * 0.8) + 'px';
+          counterOnly.style.color = `rgba(${r}, ${g}, ${b}, ${Math.min(1, opacity + 0.2)})`;
+          // Показываем примерное значение
+          const mode = allModes.find(m => m.id === values.mode) || allModes[0];
+          counterOnly.textContent = mode ? mode.format(0) : '0';
+        } else if (level === 3) {
+          // Уровень 3: Символ + цифры + единица
+          const expert = $('previewExpert');
+          expert.style.display = 'flex';
+          expert.style.width = size + 'px';
+          expert.style.height = size + 'px';
+          
+          const symbol = $('previewSymbol');
+          const mode = allModes.find(m => m.id === values.mode) || allModes[0];
+          if (mode) {
+            symbol.textContent = mode.emoji || mode.symbol || '💵';
+            symbol.style.fontSize = (size * 0.8) + 'px';
+            
+            const counterValue = $('previewCounterValue');
+            counterValue.textContent = mode.format(0);
+            counterValue.style.fontSize = (size * 0.4) + 'px';
+            counterValue.style.color = `rgba(${r}, ${g}, ${b}, ${Math.min(1, opacity + 0.2)})`;
+            
+            const counterUnit = $('previewCounterUnit');
+            counterUnit.textContent = mode.unit || '';
+            counterUnit.style.fontSize = (size * 0.2) + 'px';
+            counterUnit.style.color = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+          }
+        }
       }
 
       function loadModes() {
         // Загружаем режимы через IPC (будет реализовано в main.js)
         // Пока используем статический список
         allModes = [
-          { id: 'money', name: 'Деньги', emoji: '💵', description: 'Каждая минута = +$1' },
-          { id: 'popularity', name: 'Популярность', emoji: '👍', description: 'Каждая минута = +1 лайк' },
-          { id: 'selfDevelopment', name: 'Саморазвитие', emoji: '⬆️', description: 'Каждая минута = +1 XP, каждые 60 XP = +1 уровень' },
-          { id: 'success', name: 'Успех', emoji: '🚀', description: 'Каждая минута = +1 очко успеха' },
-          { id: 'health', name: 'Здоровье', emoji: '⏰', description: 'Каждая минута = -1 минута возраста (помолодел)' },
-          { id: 'sport', name: 'Спорт', emoji: '💪', description: 'Каждая минута = +1 грамм мышц' },
-          { id: 'creativity', name: 'Творчество', emoji: '🎨', description: 'Каждая минута = +1 единица мастерства' },
-          { id: 'learning', name: 'Обучение', emoji: '📚', description: 'Каждая минута = +1 знание' }
+          { id: 'money', name: 'Деньги', emoji: '💵', description: 'Каждая минута = +$1', unit: '$', format: (v) => v },
+          { id: 'popularity', name: 'Популярность', emoji: '👍', description: 'Каждая минута = +1 лайк', unit: '👍', format: (v) => v },
+          { id: 'selfDevelopment', name: 'Саморазвитие', emoji: '⬆️', description: 'Каждая минута = +1 XP, каждые 60 XP = +1 уровень', unit: 'Level', format: (v) => typeof v === 'object' ? v.level : Math.floor((v || 0) / 60) + 1 },
+          { id: 'success', name: 'Успех', emoji: '🚀', description: 'Каждая минута = +1 очко успеха', unit: 'Очков', format: (v) => v },
+          { id: 'health', name: 'Здоровье', emoji: '⏰', description: 'Каждая минута = -1 минута возраста (помолодел)', unit: 'мин', format: (v) => Math.abs(v) },
+          { id: 'sport', name: 'Спорт', emoji: '💪', description: 'Каждая минута = +1 грамм мышц', unit: 'г', format: (v) => v },
+          { id: 'creativity', name: 'Творчество', emoji: '🎨', description: 'Каждая минута = +1 единица мастерства', unit: 'Мастерство', format: (v) => v },
+          { id: 'learning', name: 'Обучение', emoji: '📚', description: 'Каждая минута = +1 знание', unit: 'Знаний', format: (v) => v }
         ];
         
         const modeSelect = $('mode');
@@ -423,8 +627,29 @@
         $('autostart').checked = values.autostart;
         $('showTray').checked = values.showTray !== false;
         $('mode').value = values.mode || 'money';
+        $('resetHotkey').value = values.resetHotkey || 'Ctrl+Shift+R';
+        
+        // Уровень
+        const level = values.level || 1;
+        $(`level${level}`).checked = true;
+        updateLevelVisibility(level);
+        
         updateModeDescription();
         updateTotalCounter();
+        updatePreview();
+      }
+      
+      function updateLevelVisibility(level) {
+        const motivationSection = $('motivationSection');
+        const statisticsSection = $('statisticsSection');
+        if (level === 3) {
+          motivationSection.style.display = 'block';
+          statisticsSection.style.display = 'block';
+        } else {
+          motivationSection.style.display = 'none';
+          statisticsSection.style.display = 'none';
+        }
+        // Обновляем превью при изменении уровня
         updatePreview();
       }
 
@@ -437,6 +662,14 @@
         values.autostart = $('autostart').checked;
         values.showTray = $('showTray').checked;
         values.mode = $('mode').value;
+        values.resetHotkey = $('resetHotkey').value || 'Ctrl+Shift+R';
+        
+        // Уровень
+        const levelRadio = document.querySelector('input[name="level"]:checked');
+        if (levelRadio) {
+          values.level = parseInt(levelRadio.value, 10);
+          updateLevelVisibility(values.level);
+        }
       }
 
       function syncFromSlider(id, textId, min, max) {
@@ -446,12 +679,14 @@
           const val = Math.max(min, Math.min(max, Number(slider.value)));
           text.value = id === 'opacity' ? val.toFixed(2) : val;
           readUI();
+          updatePreview();
           syncUI();
         });
         text.addEventListener('input', () => {
           const val = Math.max(min, Math.min(max, Number(text.value) || min));
           slider.value = val;
           readUI();
+          updatePreview();
           syncUI();
         });
         text.addEventListener('blur', () => {
@@ -459,6 +694,7 @@
           text.value = id === 'opacity' ? val.toFixed(2) : val;
           slider.value = val;
           readUI();
+          updatePreview();
           syncUI();
         });
       }
@@ -478,6 +714,8 @@
           }
         } catch {}
         syncUI();
+        // Убеждаемся, что превью обновлено после загрузки
+        updatePreview();
         
         // Listen for counter updates
         if (window.settingsApi && window.settingsApi.onCountersUpdated) {
@@ -493,11 +731,57 @@
       syncFromSlider('opacity', 'opacityText', 0.1, 1);
       syncFromSlider('duration', 'durationText', 5, 300);
 
-      $('color').addEventListener('input', () => { readUI(); syncUI(); });
+      $('color').addEventListener('input', () => { readUI(); updatePreview(); syncUI(); });
       $('timing').addEventListener('change', () => { readUI(); syncUI(); });
       $('autostart').addEventListener('change', () => { readUI(); syncUI(); });
       $('showTray').addEventListener('change', () => { readUI(); syncUI(); });
-      $('mode').addEventListener('change', () => { readUI(); syncUI(); });
+      $('mode').addEventListener('change', () => { readUI(); updatePreview(); syncUI(); });
+      
+      // Обработчик для горячей клавиши сброса
+      $('resetHotkey').addEventListener('keydown', (e) => {
+        e.preventDefault();
+        const parts = [];
+        if (e.ctrlKey) parts.push('Ctrl');
+        if (e.altKey) parts.push('Alt');
+        if (e.shiftKey) parts.push('Shift');
+        if (e.metaKey) parts.push('Meta');
+        
+        // Добавляем основную клавишу (исключаем модификаторы)
+        if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+          let key = e.key;
+          if (key.length === 1) {
+            key = key.toUpperCase();
+          } else if (key.startsWith('Key')) {
+            key = key.substring(3);
+          } else if (key.startsWith('Digit')) {
+            key = key.substring(5);
+          } else {
+            // Специальные клавиши
+            const keyMap = {
+              'Escape': 'Esc',
+              'Enter': 'Enter',
+              'Space': 'Space',
+              'Backspace': 'Backspace',
+              'Delete': 'Delete',
+              'ArrowUp': 'Up',
+              'ArrowDown': 'Down',
+              'ArrowLeft': 'Left',
+              'ArrowRight': 'Right',
+              'F1': 'F1', 'F2': 'F2', 'F3': 'F3', 'F4': 'F4',
+              'F5': 'F5', 'F6': 'F6', 'F7': 'F7', 'F8': 'F8',
+              'F9': 'F9', 'F10': 'F10', 'F11': 'F11', 'F12': 'F12'
+            };
+            key = keyMap[key] || key;
+          }
+          parts.push(key);
+        }
+        
+        if (parts.length > 0) {
+          $('resetHotkey').value = parts.join('+');
+          readUI();
+          syncUI();
+        }
+      });
 
       $('apply').addEventListener('click', async () => {
         readUI();

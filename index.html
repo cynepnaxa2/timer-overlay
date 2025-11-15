@@ -36,37 +36,73 @@
         position: absolute;
         right: 0;
         display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 6px;
-        animation: rise var(--duration) var(--timing) infinite;
-        padding: 4px 8px;
-        background: rgba(0, 0, 0, 0.4);
-        border-radius: 20px;
-        backdrop-filter: blur(4px);
-      }
-      .symbol {
-        width: var(--dot-size);
-        height: var(--dot-size);
-        display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        font-size: calc(var(--dot-size) * 0.7);
+        animation: rise var(--duration) var(--timing) infinite;
+        width: var(--dot-size);
+        height: var(--dot-size);
+      }
+      /* Уровень 1 - Базовый: круг */
+      .circle {
+        width: 100%;
+        height: 100%;
         border-radius: 50%;
         background: var(--dot-color);
         box-shadow: 0 0 10px var(--shadow-color);
-        color: white;
-        text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-        flex-shrink: 0;
       }
-      .counter {
-        font-size: 12px;
+      /* Уровень 2 - Продвинутый: только цифры */
+      .counter-only {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--dot-size) * 1.2);
         color: var(--counter-color);
-        font-weight: 700;
-        text-shadow: 0 0 3px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.9);
+        font-weight: 900;
+        text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.5);
         white-space: nowrap;
         text-align: center;
-        min-width: 40px;
+        line-height: 1;
+      }
+      /* Уровень 3 - Эксперт: символ + цифры + единица */
+      .symbol {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--dot-size) * 0.8);
+        opacity: 0.3;
+        z-index: 1;
+      }
+      .counter {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--dot-size) * 0.7);
+        color: var(--counter-color);
+        font-weight: 900;
+        text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.5);
+        white-space: nowrap;
+        text-align: center;
+        z-index: 2;
+        line-height: 1.2;
+        gap: 2px;
+      }
+      .counter-value {
+        font-size: calc(var(--dot-size) * 0.9);
+      }
+      .counter-unit {
+        font-size: calc(var(--dot-size) * 0.4);
+        opacity: 0.8;
       }
       @keyframes rise {
         from { top: calc(100% - var(--dot-size)); }
@@ -77,73 +113,156 @@
   <body>
     <div id="overlay">
       <div class="symbol-container">
-        <div class="symbol" id="symbol">💵</div>
-        <div class="counter" id="counter">$0</div>
+        <!-- Уровень 1: Круг -->
+        <div class="circle" id="circle" style="display: none;"></div>
+        <!-- Уровень 2: Только цифры -->
+        <div class="counter-only" id="counterOnly" style="display: none;">0</div>
+        <!-- Уровень 3: Символ + цифры + единица -->
+        <div class="symbol" id="symbol" style="display: none;">💵</div>
+        <div class="counter" id="counter" style="display: none;">
+          <div class="counter-value" id="counterValue">0</div>
+          <div class="counter-unit" id="counterUnit"></div>
+        </div>
       </div>
     </div>
     <script>
+      const circleEl = document.getElementById('circle');
+      const counterOnlyEl = document.getElementById('counterOnly');
       const symbolEl = document.getElementById('symbol');
       const counterEl = document.getElementById('counter');
+      const counterValueEl = document.getElementById('counterValue');
+      const counterUnitEl = document.getElementById('counterUnit');
       const container = document.querySelector('.symbol-container');
       let currentMode = 'money';
+      let currentLevel = 1;
       let lastVars = '';
+      
+      function updateDisplay(level, mode, counterData) {
+        // Скрываем все элементы
+        circleEl.style.display = 'none';
+        counterOnlyEl.style.display = 'none';
+        symbolEl.style.display = 'none';
+        counterEl.style.display = 'none';
+        
+        currentLevel = level || 1;
+        
+        if (currentLevel === 1) {
+          // Уровень 1: Базовый - только круг
+          circleEl.style.display = 'block';
+        } else if (currentLevel === 2) {
+          // Уровень 2: Продвинутый - только цифры
+          counterOnlyEl.style.display = 'flex';
+          if (counterData && counterData.value !== undefined) {
+            counterOnlyEl.textContent = counterData.value;
+          } else {
+            counterOnlyEl.textContent = '0';
+          }
+        } else if (currentLevel === 3) {
+          // Уровень 3: Эксперт - символ + цифры + единица
+          if (mode) {
+            symbolEl.style.display = 'flex';
+            symbolEl.textContent = mode.emoji || mode.symbol || '💵';
+            currentMode = mode.id;
+          }
+          counterEl.style.display = 'flex';
+          if (counterData) {
+            if (counterData.value !== undefined) {
+              counterValueEl.textContent = counterData.value;
+            }
+            if (mode && mode.unit) {
+              counterUnitEl.textContent = mode.unit;
+            }
+          } else {
+            counterValueEl.textContent = '0';
+            if (mode && mode.unit) {
+              counterUnitEl.textContent = mode.unit;
+            }
+          }
+        }
+      }
       
       function updateSymbol(mode) {
         if (!mode) return;
-        
         currentMode = mode.id;
-        symbolEl.className = 'symbol';
-        symbolEl.textContent = mode.emoji || mode.symbol || '💵';
+        if (currentLevel === 3) {
+          symbolEl.textContent = mode.emoji || mode.symbol || '💵';
+          if (mode.unit) {
+            counterUnitEl.textContent = mode.unit;
+          }
+        }
       }
       
-      // Получаем режим и счетчик при загрузке
+      // Получаем уровень, режим и счетчик при загрузке
       if (window.overlayApi) {
         Promise.all([
+          window.overlayApi.getSettings ? window.overlayApi.getSettings() : Promise.resolve({ level: 1 }),
           window.overlayApi.getMode(),
           window.overlayApi.getCurrentCounter ? window.overlayApi.getCurrentCounter() : Promise.resolve(null)
-        ]).then(([mode, counter]) => {
-          if (mode) {
-            if (counter) {
-              counterEl.textContent = counter.value || mode.format(0);
-              updateSymbol(mode, { counter: counter.counter });
-            } else {
-              counterEl.textContent = mode.format(0);
-              updateSymbol(mode);
-            }
-          }
-        }).catch(() => {});
+        ]).then(([settings, mode, counter]) => {
+          const level = settings.level || 1;
+          const counterValue = counter ? counter.value : (mode ? mode.format(0) : '0');
+          updateDisplay(level, mode, { value: counterValue, counter: counter?.counter });
+        }).catch(() => {
+          updateDisplay(1, null, { value: '0' });
+        });
         
         // Обновление счетчика
         window.overlayApi.onCounterUpdated((data) => {
-          if (data && data.value) {
-            counterEl.textContent = data.value;
+          if (data && data.value !== undefined) {
+            if (currentLevel === 2) {
+              counterOnlyEl.textContent = data.value;
+            } else if (currentLevel === 3) {
+              counterValueEl.textContent = data.value;
+            }
           }
         });
         
         // Обновление режима
         window.overlayApi.onModeUpdated((mode) => {
-          if (mode) {
+          if (mode && currentLevel === 3) {
             updateSymbol(mode);
-            // Получаем текущий счетчик для этого режима
             if (window.overlayApi && window.overlayApi.getCurrentCounter) {
               window.overlayApi.getCurrentCounter().then(counter => {
                 if (counter) {
-                  counterEl.textContent = counter.value || mode.format(0);
+                  counterValueEl.textContent = counter.value || mode.format(0);
+                  if (mode.unit) {
+                    counterUnitEl.textContent = mode.unit;
+                  }
                 } else {
-                  counterEl.textContent = mode.format(0);
+                  counterValueEl.textContent = mode.format(0);
+                  if (mode.unit) {
+                    counterUnitEl.textContent = mode.unit;
+                  }
                 }
-              }).catch(() => {
-                counterEl.textContent = mode.format(0);
-              });
-            } else {
-              counterEl.textContent = mode.format(0);
+              }).catch(() => {});
             }
           }
         });
+        
+        // Обновление уровня
+        if (window.overlayApi.onLevelUpdated) {
+          window.overlayApi.onLevelUpdated((level) => {
+            if (window.overlayApi && window.overlayApi.getMode) {
+              window.overlayApi.getMode().then(mode => {
+                if (window.overlayApi && window.overlayApi.getCurrentCounter) {
+                  window.overlayApi.getCurrentCounter().then(counter => {
+                    const counterValue = counter ? counter.value : (mode ? mode.format(0) : '0');
+                    updateDisplay(level, mode, { value: counterValue, counter: counter?.counter });
+                  }).catch(() => {
+                    updateDisplay(level, mode, { value: mode ? mode.format(0) : '0' });
+                  });
+                } else {
+                  updateDisplay(level, mode, { value: mode ? mode.format(0) : '0' });
+                }
+              }).catch(() => {
+                updateDisplay(level, null, { value: '0' });
+              });
+            }
+          });
+        }
       } else {
         // Fallback если API не загружен
-        symbolEl.textContent = '💵';
-        counterEl.textContent = '$0';
+        updateDisplay(1, null, { value: '0' });
       }
       
       function checkAndUpdate() {

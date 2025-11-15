@@ -12,7 +12,14 @@ const DEFAULT_SETTINGS = {
   autostart: false,
   showTray: true,
   mode: getDefaultMode(), // Режим мотивации
-  counters: {} // Счетчики по режимам: { modeId: { value, totalMinutes } }
+  counters: {}, // Счетчики по режимам: { modeId: { value, totalMinutes } }
+  level: 1, // Уровень отображения: 1 - базовый (круг), 2 - продвинутый (цифры), 3 - эксперт (символ+цифры+единица)
+  levelSettings: {
+    1: { showCircle: true, showSymbol: false, showCounter: false, showUnit: false },
+    2: { showCircle: false, showSymbol: false, showCounter: true, showUnit: false },
+    3: { showCircle: false, showSymbol: true, showCounter: true, showUnit: true }
+  },
+  resetHotkey: 'Ctrl+Shift+R' // Горячая клавиша для сброса счетчиков
 };
 
 function getSettingsPath() {

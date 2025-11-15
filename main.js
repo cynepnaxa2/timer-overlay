@@ -1,11 +1,11 @@
 const path = require('path');
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, globalShortcut } = require('electron');
 const { computeWindowBoundsForRightEdge } = require('./src/utils/positioning');
 const { readSettings, writeSettings, isFirstRun } = require('./src/store/settingsStore');
 const { buildOverlayCssVariables } = require('./src/utils/style');
 const { createTrayIcon } = require('./src/utils/trayIcon');
 const { getMode, getAllModes } = require('./src/config/modes');
-const { updateCounter, getFormattedCounter } = require('./src/utils/counters');
+const { updateCounter, getFormattedCounter, resetAllCounters } = require('./src/utils/counters');
 
 let mainWindow = null;
 let settingsWindow = null;
@@ -14,6 +14,7 @@ let overlayCssKey = null;
 let currentSettings = null;
 let counterInterval = null;
 let cycleStartTime = null;
+let resetHotkeyRegistered = false;
 
 function getOverlayWidth() {
   if (!currentSettings) currentSettings = readSettings();
@@ -119,10 +120,16 @@ async function applyOverlayStyles() {
     const css = buildOverlayCssVariables(currentSettings);
     overlayCssKey = await mainWindow.webContents.insertCSS(css);
     
-    // Send mode update to overlay
-    const mode = getMode(currentSettings.mode || 'money');
+    // Send level update to overlay
+    const level = currentSettings.level || 1;
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('mode-updated', mode);
+      mainWindow.webContents.send('level-updated', level);
+      
+      // Send mode update (only for level 3)
+      if (level === 3) {
+        const mode = getMode(currentSettings.mode || 'money');
+        mainWindow.webContents.send('mode-updated', mode);
+      }
       
       // Send current counter value
       const { getFormattedCounter } = require('./src/utils/counters');
@@ -275,8 +282,21 @@ function registerIpc() {
       startCounterTimer();
     }
     
-    // Send mode update if changed
-    if ('mode' in patch) {
+    // Re-register reset hotkey if changed
+    if ('resetHotkey' in patch) {
+      registerResetHotkey();
+    }
+    
+    // Send level update if changed
+    if ('level' in patch) {
+      const level = currentSettings.level || 1;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('level-updated', level);
+      }
+    }
+    
+    // Send mode update if changed (only for level 3)
+    if ('mode' in patch && (currentSettings.level || 1) === 3) {
       const mode = getMode(currentSettings.mode);
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('mode-updated', mode);
@@ -331,6 +351,57 @@ function startCounterTimer() {
   }, currentSettings.durationSeconds * 1000); // Интервал = длительность цикла
 }
 
+function registerResetHotkey() {
+  if (!currentSettings) currentSettings = readSettings();
+  const hotkey = currentSettings.resetHotkey || 'Ctrl+Shift+R';
+  
+  // Отменяем предыдущую регистрацию
+  if (resetHotkeyRegistered) {
+    try {
+      globalShortcut.unregisterAll();
+      resetHotkeyRegistered = false;
+    } catch {}
+  }
+  
+  // Регистрируем новую горячую клавишу
+  try {
+    const registered = globalShortcut.register(hotkey, () => {
+      if (!currentSettings) currentSettings = readSettings();
+      
+      // Сбрасываем все счетчики
+      currentSettings.counters = resetAllCounters(currentSettings.counters || {});
+      currentSettings = writeSettings(currentSettings);
+      
+      // Обновляем overlay
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const { getFormattedCounter } = require('./src/utils/counters');
+        const modeId = currentSettings.mode || 'money';
+        const formatted = getFormattedCounter(currentSettings.counters, modeId);
+        mainWindow.webContents.send('counter-updated', {
+          mode: modeId,
+          value: formatted,
+          counter: currentSettings.counters[modeId] || { value: 0, totalMinutes: 0 }
+        });
+      }
+      
+      // Обновляем settings window
+      if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.webContents.send('counters-updated', currentSettings.counters);
+      }
+    });
+    
+    if (registered) {
+      resetHotkeyRegistered = true;
+    } else {
+      // eslint-disable-next-line no-console
+      console.error('Failed to register reset hotkey:', hotkey);
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error registering reset hotkey:', err);
+  }
+}
+
 app.whenReady().then(() => {
   currentSettings = readSettings();
   
@@ -348,6 +419,9 @@ app.whenReady().then(() => {
   // Start counter timer
   startCounterTimer();
   
+  // Register reset hotkey
+  registerResetHotkey();
+  
   // Show settings on first run
   if (isFirstRun()) {
     setTimeout(() => {
@@ -360,6 +434,11 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+app.on('will-quit', () => {
+  // Отменяем регистрацию горячих клавиш при выходе
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {
