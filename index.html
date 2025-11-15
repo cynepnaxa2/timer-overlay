@@ -36,10 +36,14 @@
         position: absolute;
         right: 0;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
         animation: rise var(--duration) var(--timing) infinite;
+        padding: 4px 8px;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 20px;
+        backdrop-filter: blur(4px);
       }
       .symbol {
         width: var(--dot-size);
@@ -53,19 +57,16 @@
         box-shadow: 0 0 10px var(--shadow-color);
         color: white;
         text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+        flex-shrink: 0;
       }
       .counter {
-        font-size: 10px;
+        font-size: 12px;
         color: var(--counter-color);
         font-weight: 700;
         text-shadow: 0 0 3px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.9);
         white-space: nowrap;
-        background: rgba(0, 0, 0, 0.5);
-        padding: 3px 8px;
-        border-radius: 6px;
-        min-width: 50px;
         text-align: center;
-        backdrop-filter: blur(4px);
+        min-width: 40px;
       }
       @keyframes rise {
         from { top: calc(100% - var(--dot-size)); }
@@ -87,14 +88,28 @@
       let currentMode = 'money';
       let lastVars = '';
       
+      function updateSymbol(mode) {
+        if (!mode) return;
+        
+        currentMode = mode.id;
+        symbolEl.className = 'symbol';
+        symbolEl.textContent = mode.emoji || mode.symbol || '💵';
+      }
+      
       // Получаем режим и счетчик при загрузке
       if (window.overlayApi) {
-        window.overlayApi.getMode().then(mode => {
+        Promise.all([
+          window.overlayApi.getMode(),
+          window.overlayApi.getCurrentCounter ? window.overlayApi.getCurrentCounter() : Promise.resolve(null)
+        ]).then(([mode, counter]) => {
           if (mode) {
-            currentMode = mode.id;
-            symbolEl.textContent = mode.emoji || mode.symbol || '💵';
-            // Устанавливаем начальное значение счетчика
-            counterEl.textContent = mode.format(0);
+            if (counter) {
+              counterEl.textContent = counter.value || mode.format(0);
+              updateSymbol(mode, { counter: counter.counter });
+            } else {
+              counterEl.textContent = mode.format(0);
+              updateSymbol(mode);
+            }
           }
         }).catch(() => {});
         
@@ -108,10 +123,21 @@
         // Обновление режима
         window.overlayApi.onModeUpdated((mode) => {
           if (mode) {
-            currentMode = mode.id;
-            symbolEl.textContent = mode.emoji || mode.symbol || '💵';
-            // Сбрасываем счетчик при смене режима (или показываем текущий)
-            counterEl.textContent = mode.format(0);
+            updateSymbol(mode);
+            // Получаем текущий счетчик для этого режима
+            if (window.overlayApi && window.overlayApi.getCurrentCounter) {
+              window.overlayApi.getCurrentCounter().then(counter => {
+                if (counter) {
+                  counterEl.textContent = counter.value || mode.format(0);
+                } else {
+                  counterEl.textContent = mode.format(0);
+                }
+              }).catch(() => {
+                counterEl.textContent = mode.format(0);
+              });
+            } else {
+              counterEl.textContent = mode.format(0);
+            }
           }
         });
       } else {
