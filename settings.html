@@ -130,6 +130,23 @@
       button#close:hover {
         background: #d0d0d0;
       }
+      .button-danger {
+        background: #d32f2f;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.2s;
+      }
+      .button-danger:hover {
+        background: #b71c1c;
+      }
+      .button-danger:active {
+        background: #8b0000;
+      }
       .unit {
         font-size: 12px;
         color: #666;
@@ -279,6 +296,9 @@
       <div class="section" id="statisticsSection" style="display: none;">
         <div class="section-title">Ваша статистика</div>
         <div id="totalCounter" class="total-counter"></div>
+        <div class="row" style="margin-top: 15px;">
+          <button id="resetStats" class="button-danger" style="width: 100%;">Сбросить статистику</button>
+        </div>
       </div>
 
       <!-- Внешний вид -->
@@ -361,19 +381,37 @@
       
       let allModes = [];
 
-      function loadModes() {
-        // Загружаем режимы через IPC (будет реализовано в main.js)
-        // Пока используем статический список
-        allModes = [
-          { id: 'money', name: 'Деньги', emoji: '💵', description: 'Каждая минута = +$1', unit: '$', format: (v) => v },
-          { id: 'popularity', name: 'Популярность', emoji: '👍', description: 'Каждая минута = +1 лайк', unit: '👍', format: (v) => v },
-          { id: 'selfDevelopment', name: 'Саморазвитие', emoji: '⬆️', description: 'Каждая минута = +1 XP, каждые 60 XP = +1 уровень', unit: 'Level', format: (v) => typeof v === 'object' ? v.level : Math.floor((v || 0) / 60) + 1 },
-          { id: 'success', name: 'Успех', emoji: '🚀', description: 'Каждая минута = +1 очко успеха', unit: 'Очков', format: (v) => v },
-          { id: 'health', name: 'Здоровье', emoji: '⏰', description: 'Каждая минута = -1 минута возраста (помолодел)', unit: 'мин', format: (v) => Math.abs(v) },
-          { id: 'sport', name: 'Спорт', emoji: '💪', description: 'Каждая минута = +1 грамм мышц', unit: 'г', format: (v) => v },
-          { id: 'creativity', name: 'Творчество', emoji: '🎨', description: 'Каждая минута = +1 единица мастерства', unit: 'Мастерство', format: (v) => v },
-          { id: 'learning', name: 'Обучение', emoji: '📚', description: 'Каждая минута = +1 знание', unit: 'Знаний', format: (v) => v }
-        ];
+      async function loadModes() {
+        // Загружаем режимы через IPC
+        try {
+          if (window.settingsApi && window.settingsApi.getModes) {
+            allModes = await window.settingsApi.getModes();
+          } else {
+            // Fallback на статический список
+            allModes = [
+              { id: 'money', name: 'Деньги', emoji: '💵', description: 'Каждая минута = +$1', unit: '$' },
+              { id: 'popularity', name: 'Популярность', emoji: '👍', description: 'Каждая минута = +1 лайк', unit: '👍' },
+              { id: 'selfDevelopment', name: 'Саморазвитие', emoji: '⬆️', description: 'Каждая минута = +1 XP, каждые 60 XP = +1 уровень', unit: 'Level' },
+              { id: 'success', name: 'Успех', emoji: '🚀', description: 'Каждая минута = +1 очко успеха', unit: 'Очков успеха' },
+              { id: 'health', name: 'Здоровье', emoji: '⏰', description: 'Каждая минута = -1 минута возраста (помолодел)', unit: 'мин' },
+              { id: 'sport', name: 'Спорт', emoji: '💪', description: 'Каждая минута = +1 грамм мышц', unit: 'г' },
+              { id: 'creativity', name: 'Творчество', emoji: '🎨', description: 'Каждая минута = +1 единица мастерства', unit: 'Мастерство' },
+              { id: 'learning', name: 'Обучение', emoji: '📚', description: 'Каждая минута = +1 знание', unit: 'Знаний' }
+            ];
+          }
+        } catch (err) {
+          // Fallback на статический список при ошибке
+          allModes = [
+            { id: 'money', name: 'Деньги', emoji: '💵', description: 'Каждая минута = +$1', unit: '$' },
+            { id: 'popularity', name: 'Популярность', emoji: '👍', description: 'Каждая минута = +1 лайк', unit: '👍' },
+            { id: 'selfDevelopment', name: 'Саморазвитие', emoji: '⬆️', description: 'Каждая минута = +1 XP, каждые 60 XP = +1 уровень', unit: 'Level' },
+            { id: 'success', name: 'Успех', emoji: '🚀', description: 'Каждая минута = +1 очко успеха', unit: 'Очков успеха' },
+            { id: 'health', name: 'Здоровье', emoji: '⏰', description: 'Каждая минута = -1 минута возраста (помолодел)', unit: 'мин' },
+            { id: 'sport', name: 'Спорт', emoji: '💪', description: 'Каждая минута = +1 грамм мышц', unit: 'г' },
+            { id: 'creativity', name: 'Творчество', emoji: '🎨', description: 'Каждая минута = +1 единица мастерства', unit: 'Мастерство' },
+            { id: 'learning', name: 'Обучение', emoji: '📚', description: 'Каждая минута = +1 знание', unit: 'Знаний' }
+          ];
+        }
         
         const modeSelect = $('mode');
         modeSelect.innerHTML = '';
@@ -414,20 +452,40 @@
           
           const value = document.createElement('div');
           value.className = 'counter-item-value';
-          // Форматирование значения в зависимости от режима
+          
+          // Используем тот же формат единиц измерения, что и в описании режима
+          // Единицы измерения берутся из mode.unit, как при выборе мотивации
+          let formattedValue = '';
+          
           if (mode.id === 'selfDevelopment' && typeof counter.value === 'object') {
-            value.textContent = `Level ${counter.value.level} (XP: ${counter.value.xp})`;
+            formattedValue = `Level ${counter.value.level} (XP: ${counter.value.xp})`;
           } else if (mode.id === 'health') {
-            value.textContent = `-${Math.abs(counter.value)} мин`;
-          } else if (mode.id === 'sport') {
-            value.textContent = `+${counter.value} г`;
+            // Здоровье: -XXX мин
+            formattedValue = `-${Math.abs(counter.value)} ${mode.unit || 'мин'}`;
           } else if (mode.id === 'money') {
-            value.textContent = `$${counter.value}`;
+            // Деньги: $XXX
+            formattedValue = `${mode.unit || '$'}${counter.value}`;
           } else if (mode.id === 'popularity') {
-            value.textContent = `👍 ${counter.value}`;
+            // Популярность: 👍 XXX
+            formattedValue = `${mode.unit || '👍'} ${counter.value}`;
+          } else if (mode.id === 'sport') {
+            // Спорт: +XXX г
+            formattedValue = `+${counter.value} ${mode.unit || 'г'}`;
+          } else if (mode.id === 'success') {
+            // Успех: XXX Очков успеха (как в описании "Каждый цикл +1 клиент")
+            formattedValue = `${counter.value} ${mode.unit || 'Очков успеха'}`;
+          } else if (mode.id === 'creativity') {
+            // Творчество: XXX Мастерство
+            formattedValue = `${counter.value} ${mode.unit || 'Мастерство'}`;
+          } else if (mode.id === 'learning') {
+            // Обучение: XXX Знаний
+            formattedValue = `${counter.value} ${mode.unit || 'Знаний'}`;
           } else {
-            value.textContent = counter.value || 0;
+            // Для остальных режимов: число + единица измерения из конфигурации
+            formattedValue = mode.unit ? `${counter.value} ${mode.unit}` : `${counter.value}`;
           }
+          
+          value.textContent = formattedValue;
           
           const time = document.createElement('div');
           time.className = 'counter-item-time';
@@ -530,7 +588,7 @@
       }
 
       async function init() {
-        loadModes();
+        await loadModes();
         try {
           const s = await window.settingsApi.getSettings();
           Object.assign(values, s);
@@ -576,7 +634,11 @@
       $('timing').addEventListener('change', () => { applySettings(); });
       $('autostart').addEventListener('change', () => { applySettings(); });
       $('showTray').addEventListener('change', () => { applySettings(); });
-      $('mode').addEventListener('change', () => { applySettings(); });
+      $('mode').addEventListener('change', () => {
+        readUI();
+        updateModeDescription();
+        applySettings();
+      });
       
       // Обработчики для уровней
       document.querySelectorAll('input[name="level"]').forEach(radio => {
@@ -634,6 +696,22 @@
       });
 
       $('close').addEventListener('click', () => window.close());
+      
+      // Кнопка сброса статистики
+      $('resetStats').addEventListener('click', async () => {
+        const confirmed = confirm('Вы уверены, что хотите сбросить всю статистику? Это действие нельзя отменить.');
+        if (confirmed) {
+          try {
+            await window.settingsApi.resetStatistics();
+            // Обновляем отображение статистики
+            values.counters = {};
+            updateTotalCounter();
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to reset statistics:', err);
+          }
+        }
+      });
 
       init();
     </script>

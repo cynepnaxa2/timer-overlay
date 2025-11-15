@@ -13,7 +13,7 @@ const MODES = {
     unit: '$',
     formula: (totalMinutes) => totalMinutes, // +$1 за минуту
     format: (value) => value,
-    description: 'Каждая минута = +$1'
+    description: 'Каждый цикл +$1'
   },
   
   popularity: {
@@ -25,7 +25,7 @@ const MODES = {
     unit: '👍',
     formula: (totalMinutes) => totalMinutes, // +1 лайк за минуту
     format: (value) => value,
-    description: 'Каждая минута = +1 лайк'
+    description: 'Каждый цикл +1 лайк'
   },
   
   selfDevelopment: {
@@ -48,7 +48,7 @@ const MODES = {
       const level = Math.floor((value || 0) / 60) + 1;
       return level;
     },
-    description: 'Каждая минута = +1 XP, каждые 60 XP = +1 уровень'
+    description: 'Каждый цикл +1 XP, каждые 60 XP = +1 уровень'
   },
   
   success: {
@@ -57,10 +57,10 @@ const MODES = {
     emoji: '🚀',
     symbol: '🚀',
     color: '#FF6F00', // Оранжевый
-    unit: 'Очков успеха',
-    formula: (totalMinutes) => totalMinutes, // +1 очко за минуту
+    unit: 'клиентов',
+    formula: (totalMinutes) => totalMinutes, // +1 клиент за цикл
     format: (value) => value,
-    description: 'Каждая минута = +1 очко успеха'
+    description: 'Каждый цикл +1 клиент'
   },
   
   health: {
@@ -69,10 +69,10 @@ const MODES = {
     emoji: '⏰',
     symbol: '⏰',
     color: '#00BCD4', // Бирюзовый
-    unit: 'мин',
-    formula: (totalMinutes) => -totalMinutes, // -1 минута возраста за минуту работы
+    unit: 'минут омоложения',
+    formula: (totalMinutes) => -totalMinutes, // -1 минута возраста за цикл
     format: (value) => Math.abs(value),
-    description: 'Каждая минута = -1 минута возраста (помолодел)'
+    description: 'Каждый цикл 1 минута омоложения'
   },
   
   sport: {
@@ -81,10 +81,10 @@ const MODES = {
     emoji: '💪',
     symbol: '💪',
     color: '#2E7D32', // Темно-зеленый
-    unit: 'г',
-    formula: (totalMinutes) => totalMinutes, // +1 грамм мышц за минуту
+    unit: 'г к силе',
+    formula: (totalMinutes) => totalMinutes, // +1 грамм к силе за цикл
     format: (value) => value,
-    description: 'Каждая минута = +1 грамм мышц'
+    description: 'Каждый цикл + 1 грамм к силе'
   },
   
   creativity: {
@@ -93,10 +93,10 @@ const MODES = {
     emoji: '🎨',
     symbol: '🎨',
     color: '#9C27B0', // Фиолетовый
-    unit: 'Мастерство',
-    formula: (totalMinutes) => totalMinutes, // +1 единица мастерства за минуту
+    unit: 'идей',
+    formula: (totalMinutes) => totalMinutes, // +1 идея за цикл
     format: (value) => value,
-    description: 'Каждая минута = +1 единица мастерства'
+    description: 'Каждый цикл +1 идея'
   },
   
   learning: {
@@ -105,10 +105,10 @@ const MODES = {
     emoji: '📚',
     symbol: '📚',
     color: '#1E88E5', // Синий
-    unit: 'Знаний',
-    formula: (totalMinutes) => totalMinutes, // +1 знание за минуту
+    unit: 'фактов / аргументов',
+    formula: (totalMinutes) => totalMinutes, // +1 факт / аргумент за цикл
     format: (value) => value,
-    description: 'Каждая минута = +1 знание'
+    description: 'Каждый цикл +1 факт / аргумент'
   }
 };
 

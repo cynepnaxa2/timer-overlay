@@ -145,6 +145,15 @@
         
         currentLevel = level || 1;
         
+        // Убираем класс expert для всех уровней, кроме 3
+        if (container) {
+          if (currentLevel === 3) {
+            container.classList.add('expert');
+          } else {
+            container.classList.remove('expert');
+          }
+        }
+        
         if (currentLevel === 1) {
           // Уровень 1: Базовый - только круг
           circleEl.style.display = 'block';
@@ -158,10 +167,6 @@
           }
         } else if (currentLevel === 3) {
           // Уровень 3: Эксперт - символ + цифры рядом горизонтально
-          const container = document.querySelector('.symbol-container');
-          if (container) {
-            container.classList.add('expert');
-          }
           if (mode) {
             symbolEl.style.display = 'flex';
             symbolEl.textContent = mode.emoji || mode.symbol || '💵';
@@ -177,12 +182,6 @@
           } else {
             counterValueEl.textContent = '0';
             counterUnitEl.textContent = '';
-          }
-        } else {
-          // Убираем класс expert для других уровней
-          const container = document.querySelector('.symbol-container');
-          if (container) {
-            container.classList.remove('expert');
           }
         }
       }
@@ -214,7 +213,9 @@
         // Обновление счетчика
         window.overlayApi.onCounterUpdated((data) => {
           if (data && data.value !== undefined) {
-            if (currentLevel === 2) {
+            if (currentLevel === 1) {
+              // Для уровня 1 (круг) счетчик не обновляется, круг просто движется
+            } else if (currentLevel === 2) {
               counterOnlyEl.textContent = data.value;
             } else if (currentLevel === 3) {
               counterValueEl.textContent = data.value;
@@ -276,6 +277,9 @@
               }).catch(() => {
                 updateDisplay(level, null, { value: '0' });
               });
+            } else {
+              // Если нет API для получения режима, просто обновляем отображение с уровнем
+              updateDisplay(level, null, { value: '0' });
             }
           });
         }

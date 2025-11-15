@@ -283,6 +283,20 @@ function registerIpc() {
     };
   });
   
+  ipcMain.handle('get-modes', () => {
+    const modes = getAllModes();
+    // Возвращаем только сериализуемые данные (без функций)
+    return modes.map(mode => ({
+      id: mode.id,
+      name: mode.name,
+      emoji: mode.emoji,
+      symbol: mode.symbol,
+      color: mode.color,
+      unit: mode.unit,
+      description: mode.description
+    }));
+  });
+  
   ipcMain.handle('get-current-counter', () => {
     if (!currentSettings) currentSettings = readSettings();
     const modeId = currentSettings.mode || 'money';
@@ -293,6 +307,20 @@ function registerIpc() {
       };
     }
     return null;
+  });
+  
+  ipcMain.handle('reset-statistics', () => {
+    if (!currentSettings) currentSettings = readSettings();
+    // Сбрасываем статистику (counters), но не отображаемые счетчики (displayCounters)
+    currentSettings.counters = {};
+    currentSettings = writeSettings(currentSettings);
+    
+    // Обновляем settings window
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('counters-updated', currentSettings.counters);
+    }
+    
+    return true;
   });
   
   ipcMain.on('update-settings', async (_event, patch) => {
