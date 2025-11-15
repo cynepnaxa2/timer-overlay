@@ -101,6 +101,9 @@
       ],
       "forceCodeSigning": false
     },
+    "compression": "maximum",
+    "asar": true,
+    "asarUnpack": [],
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

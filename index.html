@@ -225,22 +225,35 @@
         
         // Обновление режима
         window.overlayApi.onModeUpdated((mode) => {
-          if (mode && currentLevel === 3) {
-            updateSymbol(mode);
-            if (window.overlayApi && window.overlayApi.getCurrentCounter) {
-              window.overlayApi.getCurrentCounter().then(counter => {
-                if (counter) {
-                  counterValueEl.textContent = counter.value || '0';
-                  if (mode.unit) {
-                    counterUnitEl.textContent = mode.unit;
+          if (mode) {
+            if (currentLevel === 3) {
+              updateSymbol(mode);
+              if (window.overlayApi && window.overlayApi.getCurrentCounter) {
+                window.overlayApi.getCurrentCounter().then(counter => {
+                  if (counter) {
+                    counterValueEl.textContent = counter.value || '0';
+                    if (mode.unit) {
+                      counterUnitEl.textContent = mode.unit;
+                    }
+                  } else {
+                    counterValueEl.textContent = '0';
+                    if (mode.unit) {
+                      counterUnitEl.textContent = mode.unit;
+                    }
                   }
-                } else {
-                  counterValueEl.textContent = '0';
-                  if (mode.unit) {
-                    counterUnitEl.textContent = mode.unit;
+                }).catch(() => {});
+              }
+            } else if (currentLevel === 2) {
+              // Для уровня 2 обновляем только счетчик
+              if (window.overlayApi && window.overlayApi.getCurrentCounter) {
+                window.overlayApi.getCurrentCounter().then(counter => {
+                  if (counter) {
+                    counterOnlyEl.textContent = counter.value || '0';
+                  } else {
+                    counterOnlyEl.textContent = '0';
                   }
-                }
-              }).catch(() => {});
+                }).catch(() => {});
+              }
             }
           }
         });

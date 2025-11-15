@@ -578,6 +578,15 @@
       $('showTray').addEventListener('change', () => { applySettings(); });
       $('mode').addEventListener('change', () => { applySettings(); });
       
+      // Обработчики для уровней
+      document.querySelectorAll('input[name="level"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          readUI();
+          updateLevelVisibility(values.level);
+          applySettings();
+        });
+      });
+      
       // Обработчик для горячей клавиши сброса
       $('resetHotkey').addEventListener('keydown', (e) => {
         e.preventDefault();
