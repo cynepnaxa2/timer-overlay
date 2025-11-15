@@ -16,7 +16,7 @@ echo ========================================
 echo Build complete!
 echo.
 echo The .exe file is in the 'dist' folder:
-echo   timer-overlay-portable.exe
+echo   its-time-portable.exe
 echo ========================================
 pause
 
