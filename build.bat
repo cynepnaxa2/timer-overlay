@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo Building Timer Overlay .exe file
+echo Building It's time! .exe file
 echo ========================================
 echo.
 

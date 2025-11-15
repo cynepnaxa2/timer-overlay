@@ -1,4 +1,4 @@
-# Timer Overlay - Функции и план разработки
+# It's time! - Функции и план разработки
 
 ## 📋 План разработки
 
@@ -131,8 +131,8 @@ npm run make-exe
 ```
 
 ### Где найти готовый файл:
-- **Расположение:** `dist/win-unpacked/Timer Overlay.exe`
-- **Использование:** Запустите `Timer Overlay.exe` - это portable версия
+- **Расположение:** `dist/win-unpacked/It's time!.exe`
+- **Использование:** Запустите `It's time!.exe` - это portable версия
 
 ---
 

@@ -188,7 +188,7 @@ function createSettingsWindow() {
     minWidth: 480,
     minHeight: 600,
     show: false,
-    title: 'Настройки Timer Overlay',
+    title: 'Настройки It\'s time!',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -217,7 +217,7 @@ function createTray() {
     const { nativeImage } = require('electron');
     tray = new Tray(nativeImage.createEmpty());
   }
-  tray.setToolTip('Timer Overlay');
+  tray.setToolTip('It\'s time!');
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Открыть настройки', click: () => createSettingsWindow() },
     { type: 'separator' },
