@@ -108,86 +108,6 @@
         cursor: pointer;
         font-weight: normal;
       }
-      .preview-container {
-        background: #f9f9f9;
-        border: 2px dashed #ddd;
-        border-radius: 8px;
-        padding: 30px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 150px;
-        margin-top: 12px;
-      }
-      .preview-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100px;
-        position: relative;
-      }
-      .preview-circle {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: rgba(255, 0, 0, 0.55);
-        box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
-        margin: 0 auto;
-      }
-      .preview-counter-only {
-        font-size: 48px;
-        font-weight: 900;
-        color: rgba(255, 0, 0, 0.9);
-        text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.5);
-        text-align: center;
-      }
-      .preview-expert {
-        position: relative;
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .preview-symbol {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 48px;
-        opacity: 0.3;
-        z-index: 1;
-      }
-      .preview-counter-container {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 2;
-        gap: 2px;
-      }
-      .preview-counter-value {
-        font-size: 24px;
-        font-weight: 900;
-        color: rgba(255, 0, 0, 0.9);
-        text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.5);
-        line-height: 1;
-      }
-      .preview-counter-unit {
-        font-size: 12px;
-        font-weight: 700;
-        color: rgba(255, 0, 0, 0.8);
-        text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
-        opacity: 0.8;
-        line-height: 1;
-      }
-        transition: all 0.2s ease;
-      }
       .actions {
         margin-top: 24px;
         display: flex;
@@ -202,17 +122,6 @@
         font-weight: 500;
         cursor: pointer;
         transition: background 0.2s;
-      }
-      button#apply {
-        background: #0078d4;
-        color: white;
-      }
-      button#apply:hover:not(:disabled) {
-        background: #106ebe;
-      }
-      button#apply:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
       }
       button#close {
         background: #e0e0e0;
@@ -339,13 +248,13 @@
               <div class="level-description">Круг. Рекомендуется всем, кто начинает с этим работать.</div>
             </div>
           </label>
-          <label class="level-option">
-            <input type="radio" name="level" value="2" id="level2">
-            <div class="level-content">
-              <div class="level-title">2. Продвинутый</div>
-              <div class="level-description">Счетчик. Когда освоились с базой, может демотивировать.</div>
-            </div>
-          </label>
+            <label class="level-option">
+              <input type="radio" name="level" value="2" id="level2">
+              <div class="level-content">
+                <div class="level-title">2. Продвинутый</div>
+                <div class="level-description">Счетчик. Рекомендуем начать с базы. Может демотивировать.</div>
+              </div>
+            </label>
           <label class="level-option">
             <input type="radio" name="level" value="3" id="level3">
             <div class="level-content">
@@ -370,25 +279,6 @@
       <div class="section" id="statisticsSection" style="display: none;">
         <div class="section-title">Ваша статистика</div>
         <div id="totalCounter" class="total-counter"></div>
-      </div>
-
-      <!-- Превью -->
-      <div class="section">
-        <div class="section-title">Предпросмотр</div>
-        <div class="preview-container">
-          <!-- Уровень 1: Круг -->
-          <div id="previewCircle" class="preview-circle" style="display: none;"></div>
-          <!-- Уровень 2: Только цифры -->
-          <div id="previewCounterOnly" class="preview-counter-only" style="display: none;">0</div>
-          <!-- Уровень 3: Символ + цифры + единица -->
-          <div id="previewExpert" class="preview-expert" style="display: none;">
-            <div class="preview-symbol" id="previewSymbol">💵</div>
-            <div class="preview-counter-container">
-              <div class="preview-counter-value" id="previewCounterValue">0</div>
-              <div class="preview-counter-unit" id="previewCounterUnit">$</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Внешний вид -->
@@ -422,11 +312,8 @@
         <div class="section-title">Анимация</div>
         
         <div class="row">
-          <label for="duration">Длительность цикла<span class="unit">(5-300 секунд)</span></label>
-          <div class="input-group">
-            <input id="duration" type="range" min="5" max="300" step="1">
-            <input id="durationText" type="number" min="5" max="300" step="1">
-          </div>
+          <label for="durationText">Длительность цикла<span class="unit">(5-300 секунд)</span></label>
+          <input id="durationText" type="number" min="5" max="300" step="1" style="width: 100px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
         </div>
 
         <div class="row">
@@ -453,7 +340,6 @@
 
       <div class="actions">
         <button id="close">Закрыть</button>
-        <button id="apply">Применить</button>
       </div>
     </div>
 
@@ -474,65 +360,6 @@
       };
       
       let allModes = [];
-
-      function updatePreview() {
-        const level = values.level || 1;
-        const size = Math.max(10, Math.min(200, values.diameterPx || 60));
-        const opacity = Math.max(0.1, Math.min(1, values.opacity || 0.55));
-        const color = values.colorHex || '#ff0000';
-        
-        // Convert hex to rgba
-        const r = parseInt(color.slice(1, 3), 16);
-        const g = parseInt(color.slice(3, 5), 16);
-        const b = parseInt(color.slice(5, 7), 16);
-        
-        // Скрываем все превью
-        $('previewCircle').style.display = 'none';
-        $('previewCounterOnly').style.display = 'none';
-        $('previewExpert').style.display = 'none';
-        
-        if (level === 1) {
-          // Уровень 1: Круг
-          const circle = $('previewCircle');
-          circle.style.display = 'block';
-          circle.style.width = size + 'px';
-          circle.style.height = size + 'px';
-          circle.style.background = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-          circle.style.boxShadow = `0 0 10px rgba(${r}, ${g}, ${b}, 0.7)`;
-        } else if (level === 2) {
-          // Уровень 2: Только цифры
-          const counterOnly = $('previewCounterOnly');
-          counterOnly.style.display = 'block';
-          counterOnly.style.fontSize = (size * 0.8) + 'px';
-          counterOnly.style.color = `rgba(${r}, ${g}, ${b}, ${Math.min(1, opacity + 0.2)})`;
-          // Показываем примерное значение
-          const mode = allModes.find(m => m.id === values.mode) || allModes[0];
-          counterOnly.textContent = mode ? mode.format(0) : '0';
-        } else if (level === 3) {
-          // Уровень 3: Символ + цифры + единица
-          const expert = $('previewExpert');
-          expert.style.display = 'flex';
-          expert.style.width = size + 'px';
-          expert.style.height = size + 'px';
-          
-          const symbol = $('previewSymbol');
-          const mode = allModes.find(m => m.id === values.mode) || allModes[0];
-          if (mode) {
-            symbol.textContent = mode.emoji || mode.symbol || '💵';
-            symbol.style.fontSize = (size * 0.8) + 'px';
-            
-            const counterValue = $('previewCounterValue');
-            counterValue.textContent = mode.format(0);
-            counterValue.style.fontSize = (size * 0.4) + 'px';
-            counterValue.style.color = `rgba(${r}, ${g}, ${b}, ${Math.min(1, opacity + 0.2)})`;
-            
-            const counterUnit = $('previewCounterUnit');
-            counterUnit.textContent = mode.unit || '';
-            counterUnit.style.fontSize = (size * 0.2) + 'px';
-            counterUnit.style.color = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-          }
-        }
-      }
 
       function loadModes() {
         // Загружаем режимы через IPC (будет реализовано в main.js)
@@ -620,7 +447,6 @@
         $('diameterText').value = values.diameterPx;
         $('opacity').value = values.opacity;
         $('opacityText').value = Number(values.opacity).toFixed(2);
-        $('duration').value = values.durationSeconds;
         $('durationText').value = values.durationSeconds;
         $('color').value = values.colorHex;
         $('timing').value = values.stepped ? 'steps' : 'linear';
@@ -636,7 +462,6 @@
         
         updateModeDescription();
         updateTotalCounter();
-        updatePreview();
       }
       
       function updateLevelVisibility(level) {
@@ -649,14 +474,12 @@
           motivationSection.style.display = 'none';
           statisticsSection.style.display = 'none';
         }
-        // Обновляем превью при изменении уровня
-        updatePreview();
       }
 
       function readUI() {
         values.diameterPx = Math.max(10, Math.min(200, Number($('diameterText').value) || Number($('diameter').value)));
         values.opacity = Math.max(0.1, Math.min(1, Number($('opacityText').value) || Number($('opacity').value)));
-        values.durationSeconds = Math.max(5, Math.min(300, Number($('durationText').value) || Number($('duration').value)));
+        values.durationSeconds = Math.max(5, Math.min(300, Number($('durationText').value) || 60));
         values.colorHex = $('color').value;
         values.stepped = $('timing').value === 'steps';
         values.autostart = $('autostart').checked;
@@ -679,24 +502,31 @@
           const val = Math.max(min, Math.min(max, Number(slider.value)));
           text.value = id === 'opacity' ? val.toFixed(2) : val;
           readUI();
-          updatePreview();
-          syncUI();
+          applySettings();
         });
         text.addEventListener('input', () => {
           const val = Math.max(min, Math.min(max, Number(text.value) || min));
           slider.value = val;
           readUI();
-          updatePreview();
-          syncUI();
+          applySettings();
         });
         text.addEventListener('blur', () => {
           const val = Math.max(min, Math.min(max, Number(text.value) || min));
           text.value = id === 'opacity' ? val.toFixed(2) : val;
           slider.value = val;
           readUI();
-          updatePreview();
-          syncUI();
+          applySettings();
         });
+      }
+      
+      async function applySettings() {
+        readUI();
+        try {
+          await window.settingsApi.updateSettings(values);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to apply settings:', err);
+        }
       }
 
       async function init() {
@@ -714,8 +544,6 @@
           }
         } catch {}
         syncUI();
-        // Убеждаемся, что превью обновлено после загрузки
-        updatePreview();
         
         // Listen for counter updates
         if (window.settingsApi && window.settingsApi.onCountersUpdated) {
@@ -729,13 +557,26 @@
       // Sync sliders and text inputs
       syncFromSlider('diameter', 'diameterText', 10, 200);
       syncFromSlider('opacity', 'opacityText', 0.1, 1);
-      syncFromSlider('duration', 'durationText', 5, 300);
+      
+      // Обработчик для длительности (только текстовое поле)
+      $('durationText').addEventListener('input', () => {
+        const val = Math.max(5, Math.min(300, Number($('durationText').value) || 60));
+        $('durationText').value = val;
+        readUI();
+        applySettings();
+      });
+      $('durationText').addEventListener('blur', () => {
+        const val = Math.max(5, Math.min(300, Number($('durationText').value) || 60));
+        $('durationText').value = val;
+        readUI();
+        applySettings();
+      });
 
-      $('color').addEventListener('input', () => { readUI(); updatePreview(); syncUI(); });
-      $('timing').addEventListener('change', () => { readUI(); syncUI(); });
-      $('autostart').addEventListener('change', () => { readUI(); syncUI(); });
-      $('showTray').addEventListener('change', () => { readUI(); syncUI(); });
-      $('mode').addEventListener('change', () => { readUI(); updatePreview(); syncUI(); });
+      $('color').addEventListener('input', () => { applySettings(); });
+      $('timing').addEventListener('change', () => { applySettings(); });
+      $('autostart').addEventListener('change', () => { applySettings(); });
+      $('showTray').addEventListener('change', () => { applySettings(); });
+      $('mode').addEventListener('change', () => { applySettings(); });
       
       // Обработчик для горячей клавиши сброса
       $('resetHotkey').addEventListener('keydown', (e) => {
@@ -783,22 +624,6 @@
         }
       });
 
-      $('apply').addEventListener('click', async () => {
-        readUI();
-        try {
-          await window.settingsApi.updateSettings(values);
-          const btn = $('apply');
-          const orig = btn.textContent;
-          btn.textContent = '✓ Применено';
-          btn.disabled = true;
-          setTimeout(() => {
-            btn.textContent = orig;
-            btn.disabled = false;
-          }, 1000);
-        } catch (err) {
-          alert('Ошибка при применении настроек: ' + err.message);
-        }
-      });
       $('close').addEventListener('click', () => window.close());
 
       init();

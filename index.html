@@ -200,7 +200,7 @@
           window.overlayApi.getCurrentCounter ? window.overlayApi.getCurrentCounter() : Promise.resolve(null)
         ]).then(([settings, mode, counter]) => {
           const level = settings.level || 1;
-          const counterValue = counter ? counter.value : (mode ? mode.format(0) : '0');
+          const counterValue = counter ? counter.value : '0';
           updateDisplay(level, mode, { value: counterValue, counter: counter?.counter });
         }).catch(() => {
           updateDisplay(1, null, { value: '0' });
@@ -213,6 +213,12 @@
               counterOnlyEl.textContent = data.value;
             } else if (currentLevel === 3) {
               counterValueEl.textContent = data.value;
+              if (data.mode && data.mode.unit) {
+                counterUnitEl.textContent = data.mode.unit;
+              }
+              if (data.mode) {
+                updateSymbol(data.mode);
+              }
             }
           }
         });
@@ -224,12 +230,12 @@
             if (window.overlayApi && window.overlayApi.getCurrentCounter) {
               window.overlayApi.getCurrentCounter().then(counter => {
                 if (counter) {
-                  counterValueEl.textContent = counter.value || mode.format(0);
+                  counterValueEl.textContent = counter.value || '0';
                   if (mode.unit) {
                     counterUnitEl.textContent = mode.unit;
                   }
                 } else {
-                  counterValueEl.textContent = mode.format(0);
+                  counterValueEl.textContent = '0';
                   if (mode.unit) {
                     counterUnitEl.textContent = mode.unit;
                   }
@@ -246,13 +252,13 @@
               window.overlayApi.getMode().then(mode => {
                 if (window.overlayApi && window.overlayApi.getCurrentCounter) {
                   window.overlayApi.getCurrentCounter().then(counter => {
-                    const counterValue = counter ? counter.value : (mode ? mode.format(0) : '0');
+                    const counterValue = counter ? counter.value : '0';
                     updateDisplay(level, mode, { value: counterValue, counter: counter?.counter });
                   }).catch(() => {
-                    updateDisplay(level, mode, { value: mode ? mode.format(0) : '0' });
+                    updateDisplay(level, mode, { value: '0' });
                   });
                 } else {
-                  updateDisplay(level, mode, { value: mode ? mode.format(0) : '0' });
+                  updateDisplay(level, mode, { value: '0' });
                 }
               }).catch(() => {
                 updateDisplay(level, null, { value: '0' });

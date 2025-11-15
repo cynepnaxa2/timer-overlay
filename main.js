@@ -125,10 +125,19 @@ async function applyOverlayStyles() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('level-updated', level);
       
-      // Send mode update (only for level 3)
+      // Send mode update
+      const mode = getMode(currentSettings.mode || 'money');
+      const modeData = {
+        id: mode.id,
+        name: mode.name,
+        emoji: mode.emoji,
+        symbol: mode.symbol,
+        color: mode.color,
+        unit: mode.unit,
+        description: mode.description
+      };
       if (level === 3) {
-        const mode = getMode(currentSettings.mode || 'money');
-        mainWindow.webContents.send('mode-updated', mode);
+        mainWindow.webContents.send('mode-updated', modeData);
       }
       
       // Send current counter value
@@ -139,7 +148,7 @@ async function applyOverlayStyles() {
         modeId
       );
       mainWindow.webContents.send('counter-updated', {
-        mode: modeId,
+        mode: modeData,
         value: formatted,
         counter: currentSettings.counters?.[modeId] || { value: 0, totalMinutes: 0 }
       });
@@ -246,7 +255,17 @@ function registerIpc() {
   
   ipcMain.handle('get-mode', () => {
     if (!currentSettings) currentSettings = readSettings();
-    return getMode(currentSettings.mode || 'money');
+    const mode = getMode(currentSettings.mode || 'money');
+    // Возвращаем только сериализуемые данные (без функций)
+    return {
+      id: mode.id,
+      name: mode.name,
+      emoji: mode.emoji,
+      symbol: mode.symbol,
+      color: mode.color,
+      unit: mode.unit,
+      description: mode.description
+    };
   });
   
   ipcMain.handle('get-current-counter', () => {
@@ -295,11 +314,21 @@ function registerIpc() {
       }
     }
     
-    // Send mode update if changed (only for level 3)
-    if ('mode' in patch && (currentSettings.level || 1) === 3) {
+    // Send mode update if changed
+    if ('mode' in patch) {
       const mode = getMode(currentSettings.mode);
+      // Отправляем только сериализуемые данные (без функций)
+      const modeData = {
+        id: mode.id,
+        name: mode.name,
+        emoji: mode.emoji,
+        symbol: mode.symbol,
+        color: mode.color,
+        unit: mode.unit,
+        description: mode.description
+      };
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('mode-updated', mode);
+        mainWindow.webContents.send('mode-updated', modeData);
       }
     }
     
