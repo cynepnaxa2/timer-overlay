@@ -34,7 +34,7 @@
       }
       .symbol-container {
         position: absolute;
-        right: 0;
+        right: 10px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -42,6 +42,7 @@
         animation: rise var(--duration) var(--timing) infinite;
         width: var(--dot-size);
         height: var(--dot-size);
+        min-width: var(--dot-size);
       }
       /* Уровень 1 - Базовый: круг */
       .circle {
@@ -72,6 +73,9 @@
         flex-direction: row;
         align-items: center;
         gap: 4px;
+        width: auto;
+        min-width: auto;
+        max-width: 100%;
       }
       .symbol {
         display: flex;
@@ -168,18 +172,11 @@
             if (counterData.value !== undefined) {
               counterValueEl.textContent = counterData.value;
             }
-            if (mode && mode.unit) {
-              counterUnitEl.textContent = mode.unit;
-            } else {
-              counterUnitEl.textContent = '';
-            }
+            // В экспертном режиме не показываем единицы измерения
+            counterUnitEl.textContent = '';
           } else {
             counterValueEl.textContent = '0';
-            if (mode && mode.unit) {
-              counterUnitEl.textContent = mode.unit;
-            } else {
-              counterUnitEl.textContent = '';
-            }
+            counterUnitEl.textContent = '';
           }
         } else {
           // Убираем класс expert для других уровней
@@ -195,11 +192,8 @@
         currentMode = mode.id;
         if (currentLevel === 3) {
           symbolEl.textContent = mode.emoji || mode.symbol || '💵';
-          if (mode.unit) {
-            counterUnitEl.textContent = mode.unit;
-          } else {
-            counterUnitEl.textContent = '';
-          }
+          // В экспертном режиме не показываем единицы измерения
+          counterUnitEl.textContent = '';
         }
       }
       
@@ -224,9 +218,8 @@
               counterOnlyEl.textContent = data.value;
             } else if (currentLevel === 3) {
               counterValueEl.textContent = data.value;
-              if (data.mode && data.mode.unit) {
-                counterUnitEl.textContent = data.mode.unit;
-              }
+              // В экспертном режиме не показываем единицы измерения
+              counterUnitEl.textContent = '';
               if (data.mode) {
                 updateSymbol(data.mode);
               }
@@ -243,15 +236,11 @@
                 window.overlayApi.getCurrentCounter().then(counter => {
                   if (counter) {
                     counterValueEl.textContent = counter.value || '0';
-                    if (mode.unit) {
-                      counterUnitEl.textContent = mode.unit;
-                    }
                   } else {
                     counterValueEl.textContent = '0';
-                    if (mode.unit) {
-                      counterUnitEl.textContent = mode.unit;
-                    }
                   }
+                  // В экспертном режиме не показываем единицы измерения
+                  counterUnitEl.textContent = '';
                 }).catch(() => {});
               }
             } else if (currentLevel === 2) {

@@ -21,20 +21,21 @@ function getOverlayWidth() {
   const symbolSize = Math.max(10, Math.min(200, currentSettings.diameterPx || 60));
   const level = currentSettings.level || 1;
   
-  // Для уровня 3 (эксперт) нужно больше места: символ + цифры + единица измерения
+  // Для уровня 3 (эксперт) нужно место: символ + цифры (без единицы измерения)
   if (level === 3) {
-    // Ширина символа + ширина цифр (до 4 цифр) + единица измерения + отступы
-    const textWidth = symbolSize * 0.6 + symbolSize * 0.7 * 4 + symbolSize * 0.5 + 20;
-    return Math.max(symbolSize, textWidth);
+    // Ширина символа + ширина цифр (до 6 цифр для больших чисел) + отступы
+    const textWidth = symbolSize * 0.6 + symbolSize * 0.7 * 6 + 20;
+    return Math.max(symbolSize + 50, textWidth);
   }
   
-  // Для уровня 2 нужно место для цифр
+  // Для уровня 2 нужно место для цифр (до 6 цифр)
   if (level === 2) {
-    return symbolSize + 40; // Дополнительное место для цифр
+    return symbolSize + symbolSize * 0.7 * 6 + 30; // Место для больших чисел
   }
   
-  // Для уровня 1 (круг) достаточно размера круга
-  return symbolSize + 10; // Небольшой отступ
+  // Для уровня 1 (круг) нужен размер круга + отступы
+  // Учитываем right: 10px из .symbol-container и padding-right: 4px из #overlay
+  return symbolSize + 20; // Отступы для полного отображения круга
 }
 
 function updateWindowSize() {
