@@ -9,6 +9,11 @@ echo "Installing dependencies..."
 npm install
 
 echo ""
+echo "Cleaning previous build..."
+rm -rf dist/win-unpacked
+rm -f dist/*.exe
+
+echo ""
 echo "Building portable .exe..."
 npm run build:portable
 
