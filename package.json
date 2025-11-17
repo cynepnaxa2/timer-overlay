@@ -14,7 +14,7 @@
     "test:integration": "jest --selectProjects integration",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
-    "build:portable": "electron-builder --win portable",
+    "build:portable": "electron-builder --win dir",
     "dist": "electron-builder --publish=never",
     "make-exe": "npm run build:portable"
   },
@@ -95,7 +95,7 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "dir",
           "arch": ["x64"]
         }
       ],
@@ -112,9 +112,6 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    },
-    "portable": {
-      "artifactName": "its-time-portable.exe"
     }
   }
 }
