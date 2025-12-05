@@ -66,8 +66,8 @@ const MODES = {
   health: {
     id: 'health',
     name: 'Здоровье',
-    emoji: '⏰',
-    symbol: '⏰',
+    emoji: '❤️',
+    symbol: '❤️',
     color: '#00BCD4', // Бирюзовый
     unit: 'минут омоложения',
     formula: (totalMinutes) => -totalMinutes, // -1 минута возраста за цикл

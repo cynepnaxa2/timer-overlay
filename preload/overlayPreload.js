@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('overlayApi', {
   },
   onLevelUpdated: (callback) => {
     ipcRenderer.on('level-updated', (_event, level) => callback(level));
+  },
+  onRestartCycle: (callback) => {
+    ipcRenderer.on('restart-cycle', (_event) => callback());
   }
 });
 

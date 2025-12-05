@@ -136,6 +136,15 @@
       let currentLevel = 1;
       let lastVars = '';
       
+      function restartAnimation() {
+        if (!container) return;
+        container.style.animation = 'none';
+        // Force reflow to reset animation state
+        // eslint-disable-next-line no-unused-expressions
+        container.offsetHeight;
+        container.style.animation = '';
+      }
+      
       function updateDisplay(level, mode, counterData) {
         // Скрываем все элементы
         circleEl.style.display = 'none';
@@ -283,6 +292,12 @@
             }
           });
         }
+        
+        if (window.overlayApi.onRestartCycle) {
+          window.overlayApi.onRestartCycle(() => {
+            restartAnimation();
+          });
+        }
       } else {
         // Fallback если API не загружен
         updateDisplay(1, null, { value: '0' });
@@ -299,11 +314,7 @@
         
         if (current !== lastVars) {
           lastVars = current;
-          // Force animation restart
-          container.style.animation = 'none';
-          requestAnimationFrame(() => {
-            container.style.animation = '';
-          });
+          restartAnimation();
         }
       }
       

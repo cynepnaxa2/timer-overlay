@@ -349,8 +349,8 @@
         <div class="section-title">Анимация</div>
         
         <div class="row">
-          <label for="durationText">Длительность цикла<span class="unit">(5-300 секунд)</span></label>
-          <input id="durationText" type="number" min="5" max="300" step="1" style="width: 100px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+          <label for="durationText">Длительность цикла<span class="unit">(секунд)</span></label>
+          <input id="durationText" type="number" min="1" step="1" style="width: 100px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
         </div>
 
         <div class="row">
@@ -554,7 +554,7 @@
       function readUI() {
         values.diameterPx = Math.max(10, Math.min(200, Number($('diameterText').value) || Number($('diameter').value)));
         values.opacity = Math.max(0.1, Math.min(1, Number($('opacityText').value) || Number($('opacity').value)));
-        values.durationSeconds = Math.max(5, Math.min(300, Number($('durationText').value) || 60));
+        values.durationSeconds = Math.max(1, Number($('durationText').value) || 60);
         values.colorHex = $('color').value;
         values.stepped = $('timing').value === 'steps';
         values.autostart = $('autostart').checked;
@@ -635,13 +635,13 @@
       
       // Обработчик для длительности (только текстовое поле)
       $('durationText').addEventListener('input', () => {
-        const val = Math.max(5, Math.min(300, Number($('durationText').value) || 60));
+        const val = Math.max(1, Number($('durationText').value) || 60);
         $('durationText').value = val;
         readUI();
         applySettings();
       });
       $('durationText').addEventListener('blur', () => {
-        const val = Math.max(5, Math.min(300, Number($('durationText').value) || 60));
+        const val = Math.max(1, Number($('durationText').value) || 60);
         $('durationText').value = val;
         readUI();
         applySettings();

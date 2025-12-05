@@ -534,6 +534,7 @@ function registerResetHotkey() {
           value: formatted,
           counter: currentSettings.displayCounters?.[modeId] || 0
         });
+        mainWindow.webContents.send('restart-cycle');
       }
       
       // Обновляем settings window (статистика не меняется)
