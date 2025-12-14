@@ -1,0 +1,62 @@
+[
+  {
+    "id": "demo-1",
+    "content": "Добро пожаловать в AI Todo List!",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000000000,
+    "motivationWord": null
+  },
+  {
+    "id": "demo-2",
+    "content": "Это пример корневой задачи (фиолетовый цвет)",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 1,
+    "createdAt": 1700000001000,
+    "motivationWord": null
+  },
+  {
+    "id": "demo-3",
+    "content": "Это подзадача первого уровня (синий цвет)",
+    "parentId": "demo-2",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000002000,
+    "motivationWord": null
+  },
+  {
+    "id": "demo-4",
+    "content": "Это подзадача второго уровня (голубой цвет)",
+    "parentId": "demo-3",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000003000,
+    "motivationWord": null
+  },
+  {
+    "id": "demo-5",
+    "content": "Еще одна корневая задача",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 2,
+    "createdAt": 1700000004000,
+    "motivationWord": null
+  },
+  {
+    "id": "demo-6",
+    "content": "Подзадача с текстом, который можно редактировать. Высота автоматически подстраивается под содержимое.",
+    "parentId": "demo-5",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000005000,
+    "motivationWord": null
+  }
+]

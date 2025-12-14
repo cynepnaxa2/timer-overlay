@@ -1,0 +1,618 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Todo List</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 100vw;
+        height: 100vh;
+        overflow-y: auto;
+        background: #1a1a1a;
+        color: #fff;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      #todo-container {
+        width: 100%;
+        position: relative;
+      }
+      .task {
+        width: 100%;
+        min-height: 40px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        position: relative;
+      }
+      .task-hierarchy {
+        position: relative;
+        flex-shrink: 0;
+        width: 20px;
+        min-width: 20px;
+      }
+      .hierarchy-line {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.7);
+        pointer-events: none;
+        z-index: 0;
+      }
+      .hierarchy-line-vertical {
+        width: 1px;
+      }
+      .hierarchy-line-horizontal {
+        height: 1px;
+      }
+      .task-content {
+        position: relative;
+        z-index: 1;
+      }
+      .task-group-separator {
+        height: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .task-content {
+        width: 100%;
+        min-height: 40px;
+        padding: 12px;
+        outline: none;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        overflow: hidden;
+        resize: none;
+        color: #fff;
+        background: transparent;
+      }
+      .task-content:focus {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .task-actions {
+        display: none;
+        padding: 8px 12px;
+        background: rgba(0, 0, 0, 0.3);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        flex-wrap: wrap;
+      }
+      .task.active .task-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .task-actions button {
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .task-actions button:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="todo-container"></div>
+    <script>
+      const COLORS = ['#8B00FF', '#0000FF', '#00FFFF', '#00FF00', '#FFFF00', '#FF7F00', '#FF0000'];
+      
+      function getColorForLevel(level) {
+        if (level < 0) return COLORS[0];
+        if (level >= COLORS.length) return COLORS[COLORS.length - 1];
+        return COLORS[level];
+      }
+      
+      function calculateLevel(task, todos) {
+        if (!task.parentId) return 0;
+        const parent = todos.find(t => t.id === task.parentId);
+        if (!parent) return 0;
+        return calculateLevel(parent, todos) + 1;
+      }
+      
+      function getAncestors(task, todos) {
+        const ancestors = [];
+        let current = task;
+        while (current.parentId) {
+          const parent = todos.find(t => t.id === current.parentId);
+          if (!parent) break;
+          ancestors.push(parent);
+          current = parent;
+        }
+        return ancestors.reverse();
+      }
+      
+      function shouldContinueAncestorLine(ancestor, currentTask, todos) {
+        const ancestorChildren = todos.filter(t => t.parentId === ancestor.id && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
+        if (ancestorChildren.length === 0) return false;
+        
+        const lastChild = ancestorChildren[ancestorChildren.length - 1];
+        if (isTaskDescendant(lastChild, currentTask, todos)) {
+          return false;
+        }
+        
+        let foundCurrent = false;
+        for (const child of ancestorChildren) {
+          if (isTaskDescendant(child, currentTask, todos)) {
+            foundCurrent = true;
+            continue;
+          }
+          if (foundCurrent) {
+            return true;
+          }
+        }
+        return false;
+      }
+      
+      function isTaskDescendant(ancestor, task, todos) {
+        if (ancestor.id === task.id) return true;
+        const children = todos.filter(t => t.parentId === ancestor.id && !t.completed);
+        for (const child of children) {
+          if (isTaskDescendant(child, task, todos)) return true;
+        }
+        return false;
+      }
+      
+      function autoResize(element) {
+        if (!element) return;
+        const currentHeight = element.style.height;
+        element.style.height = 'auto';
+        const scrollHeight = element.scrollHeight;
+        const minHeight = 40;
+        const newHeight = Math.max(minHeight, scrollHeight);
+        element.style.height = newHeight + 'px';
+      }
+      
+      let updateTimeout = null;
+      let focusedElement = null;
+      let focusedTaskId = null;
+      let activeTaskId = null;
+      let currentTodos = [];
+      
+      function setupRichEditor(element, taskId) {
+        element.addEventListener('focus', () => {
+          focusedElement = element;
+          focusedTaskId = taskId;
+        });
+        
+        element.addEventListener('blur', () => {
+          if (focusedElement === element) {
+            focusedElement = null;
+            focusedTaskId = null;
+          }
+        });
+        
+        element.addEventListener('input', () => {
+          autoResize(element);
+          if (window.todoApi) {
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+              window.todoApi.updateTodo(taskId, { content: element.innerHTML });
+            }, 300);
+          }
+        });
+        
+        element.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+          const selection = window.getSelection();
+          if (!selection.rangeCount) return;
+          
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          const textNode = document.createTextNode(text);
+          range.insertNode(textNode);
+          range.setStartAfter(textNode);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          autoResize(element);
+          if (window.todoApi) {
+            window.todoApi.updateTodo(taskId, { content: element.innerHTML });
+          }
+        });
+        
+        setTimeout(() => {
+          autoResize(element);
+        }, 0);
+      }
+      
+      function createTaskActions(taskId) {
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'task-actions';
+        
+        const addSubtaskBtn = document.createElement('button');
+        addSubtaskBtn.textContent = 'Добавить подзадачу';
+        addSubtaskBtn.dataset.action = 'add-subtask';
+        addSubtaskBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (window.todoApi) {
+            window.todoApi.createTodo('', taskId).then(() => {
+              return window.todoApi.getTodos();
+            }).then(todos => {
+              currentTodos = todos;
+              renderTasks(todos, true);
+            });
+          }
+        };
+        
+        const executeBtn = document.createElement('button');
+        executeBtn.textContent = 'Выполнить';
+        executeBtn.dataset.action = 'execute';
+        executeBtn.onclick = (e) => {
+          e.stopPropagation();
+          const task = currentTodos.find(t => t.id === taskId);
+          if (window.todoApi && task) {
+            window.todoApi.startTimer(task.motivationWord || null);
+          }
+        };
+        
+        const completeBtn = document.createElement('button');
+        completeBtn.textContent = 'Выполнено';
+        completeBtn.dataset.action = 'complete';
+        completeBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (window.todoApi) {
+            window.todoApi.updateTodo(taskId, { 
+              completed: true, 
+              completedAt: Date.now() 
+            }).then(() => {
+              return window.todoApi.getTodos();
+            }).then(todos => {
+              currentTodos = todos;
+              renderTasks(todos, true);
+            });
+          }
+        };
+        
+        actionsEl.appendChild(addSubtaskBtn);
+        actionsEl.appendChild(executeBtn);
+        actionsEl.appendChild(completeBtn);
+        
+        return actionsEl;
+      }
+      
+      function hasChildren(task, todos) {
+        return todos.some(t => t.parentId === task.id && !t.completed);
+      }
+      
+      function getSiblings(task, todos) {
+        if (!task.parentId) {
+          return todos.filter(t => !t.parentId && !t.completed && t.id !== task.id);
+        }
+        return todos.filter(t => t.parentId === task.parentId && !t.completed && t.id !== task.id);
+      }
+      
+      function isLastChild(task, todos) {
+        if (!task.parentId) {
+          const rootTasks = todos.filter(t => !t.parentId && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
+          return rootTasks.length === 0 || rootTasks[rootTasks.length - 1].id === task.id;
+        }
+        const siblings = todos.filter(t => t.parentId === task.parentId && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
+        return siblings.length === 0 || siblings[siblings.length - 1].id === task.id;
+      }
+      
+      function createTaskHierarchy(task, todos) {
+        const currentLevel = calculateLevel(task, todos);
+        
+        const hierarchyEl = document.createElement('div');
+        hierarchyEl.className = 'task-hierarchy';
+        hierarchyEl.style.width = `${20 + currentLevel * 20}px`;
+        hierarchyEl.style.minWidth = `${20 + currentLevel * 20}px`;
+        
+        return hierarchyEl;
+      }
+      
+      function getLastDescendant(task, todos) {
+        const children = todos.filter(t => t.parentId === task.id && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
+        if (children.length === 0) return task;
+        return getLastDescendant(children[children.length - 1], todos);
+      }
+      
+      function drawHierarchyLines(todos, container) {
+        container.querySelectorAll('.hierarchy-line').forEach(el => el.remove());
+        
+        const taskElements = Array.from(container.querySelectorAll('.task'));
+        const taskElementMap = new Map();
+        taskElements.forEach(el => {
+          const taskId = el.dataset.taskId;
+          if (taskId) {
+            taskElementMap.set(taskId, el);
+          }
+        });
+        
+        const getTaskPosition = (taskId) => {
+          const el = taskElementMap.get(taskId);
+          if (!el) return null;
+          const rect = el.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          return {
+            top: rect.top - containerRect.top + container.scrollTop,
+            height: rect.height,
+            center: rect.top - containerRect.top + container.scrollTop + rect.height / 2,
+            bottom: rect.top - containerRect.top + container.scrollTop + rect.height
+          };
+        };
+        
+        const drawnVerticalLines = new Set();
+        
+        todos.filter(t => !t.completed).forEach(task => {
+          const taskPos = getTaskPosition(task.id);
+          if (!taskPos) return;
+          
+          const level = calculateLevel(task, todos);
+          
+          if (task.parentId) {
+            const parent = todos.find(t => t.id === task.parentId);
+            if (parent) {
+              const parentLevel = calculateLevel(parent, todos);
+              const lineX = 9 + parentLevel * 20;
+              
+              const horizontalLine = document.createElement('div');
+              horizontalLine.className = 'hierarchy-line hierarchy-line-horizontal';
+              horizontalLine.style.left = `${lineX}px`;
+              horizontalLine.style.top = `${taskPos.center}px`;
+              horizontalLine.style.width = `${11}px`;
+              container.appendChild(horizontalLine);
+            }
+          }
+          
+          const hasChildrenTasks = hasChildren(task, todos);
+          if (hasChildrenTasks) {
+            const lineX = 9 + level * 20;
+            const lineKey = `v-${task.id}`;
+            if (drawnVerticalLines.has(lineKey)) return;
+            drawnVerticalLines.add(lineKey);
+            
+            const lastDescendant = getLastDescendant(task, todos);
+            const lastDescendantPos = getTaskPosition(lastDescendant.id);
+            if (lastDescendantPos) {
+              const verticalLine = document.createElement('div');
+              verticalLine.className = 'hierarchy-line hierarchy-line-vertical';
+              verticalLine.style.left = `${lineX}px`;
+              verticalLine.style.top = `${taskPos.center}px`;
+              verticalLine.style.height = `${Math.max(0, lastDescendantPos.bottom - taskPos.center)}px`;
+              container.appendChild(verticalLine);
+            }
+          }
+          
+          if (!task.parentId) return;
+          
+          const parent = todos.find(t => t.id === task.parentId);
+          if (!parent) return;
+          
+          const parentLevel = calculateLevel(parent, todos);
+          const lineKey = `p-${parent.id}`;
+          if (drawnVerticalLines.has(lineKey)) return;
+          
+          const lastChild = isLastChild(task, todos);
+          if (lastChild) {
+            const hasParentChildren = hasChildren(parent, todos);
+            if (hasParentChildren) {
+              const lastDescendant = getLastDescendant(parent, todos);
+              const lastDescendantPos = getTaskPosition(lastDescendant.id);
+              const parentPos = getTaskPosition(parent.id);
+              if (parentPos && lastDescendantPos) {
+                drawnVerticalLines.add(lineKey);
+                const lineX = 9 + parentLevel * 20;
+                
+                const parentVerticalLine = document.createElement('div');
+                parentVerticalLine.className = 'hierarchy-line hierarchy-line-vertical';
+                parentVerticalLine.style.left = `${lineX}px`;
+                parentVerticalLine.style.top = `${parentPos.center}px`;
+                parentVerticalLine.style.height = `${Math.max(0, lastDescendantPos.bottom - parentPos.center)}px`;
+                container.appendChild(parentVerticalLine);
+              }
+            }
+            return;
+          }
+          
+          const parentPos = getTaskPosition(parent.id);
+          if (!parentPos) return;
+          
+          const siblings = todos.filter(t => t.parentId === parent.id && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
+          const currentIndex = siblings.findIndex(t => t.id === task.id);
+          if (currentIndex >= 0 && currentIndex < siblings.length - 1) {
+            const lastSibling = siblings[siblings.length - 1];
+            const lastDescendant = getLastDescendant(lastSibling, todos);
+            const lastDescendantPos = getTaskPosition(lastDescendant.id);
+            if (lastDescendantPos) {
+              drawnVerticalLines.add(lineKey);
+              const lineX = 9 + parentLevel * 20;
+              
+              const parentVerticalLine = document.createElement('div');
+              parentVerticalLine.className = 'hierarchy-line hierarchy-line-vertical';
+              parentVerticalLine.style.left = `${lineX}px`;
+              parentVerticalLine.style.top = `${parentPos.center}px`;
+              parentVerticalLine.style.height = `${Math.max(0, lastDescendantPos.bottom - parentPos.center)}px`;
+              container.appendChild(parentVerticalLine);
+            }
+          }
+        });
+      }
+      
+      function renderTask(task, todos, container) {
+        const level = calculateLevel(task, todos);
+        
+        let taskEl = container.querySelector(`[data-task-id="${task.id}"]`);
+        
+        if (!taskEl) {
+          taskEl = document.createElement('div');
+          taskEl.className = 'task';
+          taskEl.dataset.taskId = task.id;
+          if (task.parentId) {
+            taskEl.classList.add('has-parent');
+          }
+          
+          const hierarchyEl = createTaskHierarchy(task, todos);
+          
+          const contentEl = document.createElement('div');
+          contentEl.className = 'task-content';
+          contentEl.contentEditable = 'true';
+          contentEl.innerHTML = task.content || '';
+          
+          contentEl.setAttribute('data-click-handler', 'true');
+          contentEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
+            taskEl.classList.add('active');
+            activeTaskId = task.id;
+          });
+          
+          const actionsEl = createTaskActions(task.id);
+          
+          taskEl.appendChild(hierarchyEl);
+          taskEl.appendChild(contentEl);
+          taskEl.appendChild(actionsEl);
+          container.appendChild(taskEl);
+          
+          setupRichEditor(contentEl, task.id);
+          requestAnimationFrame(() => {
+            autoResize(contentEl);
+            setTimeout(() => {
+              drawHierarchyLines(currentTodos, container);
+            }, 0);
+          });
+        } else {
+          if (task.parentId) {
+            taskEl.classList.add('has-parent');
+          } else {
+            taskEl.classList.remove('has-parent');
+          }
+          const contentEl = taskEl.querySelector('.task-content');
+          if (contentEl && contentEl !== focusedElement) {
+            contentEl.innerHTML = task.content || '';
+            requestAnimationFrame(() => {
+              autoResize(contentEl);
+            });
+          }
+          let hierarchyEl = taskEl.querySelector('.task-hierarchy');
+          if (!hierarchyEl) {
+            hierarchyEl = createTaskHierarchy(task, todos);
+            const contentEl = taskEl.querySelector('.task-content');
+            if (contentEl) {
+              taskEl.insertBefore(hierarchyEl, contentEl);
+            }
+          }
+          let actionsEl = taskEl.querySelector('.task-actions');
+          if (!actionsEl) {
+            actionsEl = createTaskActions(task.id);
+            taskEl.appendChild(actionsEl);
+          } else {
+            const buttons = actionsEl.querySelectorAll('button[data-action="add-subtask"]');
+            buttons.forEach(btn => {
+              btn.onclick = (e) => {
+                e.stopPropagation();
+                if (window.todoApi) {
+                  window.todoApi.createTodo('', task.id).then(() => {
+                    return window.todoApi.getTodos();
+                  }).then(todos => {
+                    currentTodos = todos;
+                    renderTasks(todos, true);
+                  });
+                }
+              };
+            });
+          }
+          if (contentEl && !contentEl.hasAttribute('data-click-handler')) {
+            contentEl.setAttribute('data-click-handler', 'true');
+            contentEl.addEventListener('click', (e) => {
+              e.stopPropagation();
+              document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
+              taskEl.classList.add('active');
+              activeTaskId = task.id;
+            });
+          }
+          if (activeTaskId === task.id) {
+            taskEl.classList.add('active');
+          }
+        }
+        
+        const children = todos.filter(t => t.parentId === task.id && !t.completed);
+        children.sort((a, b) => (a.order || 0) - (b.order || 0));
+        children.forEach(child => renderTask(child, todos, container));
+      }
+      
+      function renderTasks(todos, preserveExisting = false) {
+        currentTodos = todos;
+        const container = document.getElementById('todo-container');
+        if (!container) return;
+        
+        if (!preserveExisting) {
+          container.innerHTML = '';
+          activeTaskId = null;
+        } else {
+          const existingIds = new Set(Array.from(container.querySelectorAll('[data-task-id]')).map(el => el.dataset.taskId));
+          const currentIds = new Set(todos.filter(t => !t.completed).map(t => t.id));
+          existingIds.forEach(id => {
+            if (!currentIds.has(id)) {
+              const el = container.querySelector(`[data-task-id="${id}"]`);
+              if (el) el.remove();
+              if (activeTaskId === id) {
+                activeTaskId = null;
+              }
+            }
+          });
+        }
+        
+        const rootTasks = todos.filter(t => !t.parentId && !t.completed);
+        rootTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        rootTasks.forEach(task => renderTask(task, todos, container));
+        
+        requestAnimationFrame(() => {
+          const allContentElements = container.querySelectorAll('.task-content');
+          allContentElements.forEach(el => {
+            if (el !== focusedElement) {
+              autoResize(el);
+            }
+          });
+          setTimeout(() => {
+            drawHierarchyLines(todos, container);
+          }, 0);
+        });
+      }
+      
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.task')) {
+          document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
+          activeTaskId = null;
+        }
+      });
+      
+      if (window.todoApi) {
+        window.todoApi.getTodos().then(todos => {
+          if (todos.length === 0) {
+            window.todoApi.loadLargeDemo().then(() => {
+              return window.todoApi.getTodos();
+            }).then(todos => {
+              renderTasks(todos, false);
+            }).catch(() => {
+              renderTasks([], false);
+            });
+          } else {
+            renderTasks(todos, false);
+          }
+        });
+        
+        window.todoApi.onTodosUpdated((todos) => {
+          renderTasks(todos, focusedElement !== null);
+        });
+      }
+      
+      window.loadLargeDemo = function() {
+        if (window.todoApi) {
+          window.todoApi.loadLargeDemo().then(() => {
+            return window.todoApi.getTodos();
+          }).then(todos => {
+            renderTasks(todos, false);
+          });
+        }
+      };
+    </script>
+  </body>
+</html>

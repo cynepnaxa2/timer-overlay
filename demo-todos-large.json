@@ -1,0 +1,252 @@
+[
+  {
+    "id": "root-1",
+    "content": "Корневая задача 1 - Вариант: Яркая линия",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000000000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-1-1",
+    "content": "Подзадача первого уровня",
+    "parentId": "root-1",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000001000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-1-2",
+    "content": "Подзадача второго уровня",
+    "parentId": "child-1-1",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000002000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-1-3",
+    "content": "Подзадача третьего уровня",
+    "parentId": "child-1-2",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000003000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-1-4",
+    "content": "Подзадача четвертого уровня",
+    "parentId": "child-1-3",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000004000,
+    "motivationWord": null
+  },
+  {
+    "id": "root-2",
+    "content": "Корневая задача 2 - Вариант: Отступ полоски",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 1,
+    "createdAt": 1700000005000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-2-1",
+    "content": "Подзадача первого уровня",
+    "parentId": "root-2",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000006000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-2-2",
+    "content": "Подзадача второго уровня",
+    "parentId": "child-2-1",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000007000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-2-3",
+    "content": "Подзадача третьего уровня",
+    "parentId": "child-2-2",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000008000,
+    "motivationWord": null
+  },
+  {
+    "id": "root-3",
+    "content": "Корневая задача 3 - Вариант: Широкая полоска",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 2,
+    "createdAt": 1700000009000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-3-1",
+    "content": "Подзадача первого уровня",
+    "parentId": "root-3",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000010000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-3-2",
+    "content": "Подзадача второго уровня",
+    "parentId": "child-3-1",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000011000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-3-3",
+    "content": "Подзадача третьего уровня",
+    "parentId": "child-3-2",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000012000,
+    "motivationWord": null
+  },
+  {
+    "id": "root-4",
+    "content": "Корневая задача 4 - Вариант: Граница слева",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 3,
+    "createdAt": 1700000013000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-4-1",
+    "content": "Подзадача первого уровня",
+    "parentId": "root-4",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000014000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-4-2",
+    "content": "Подзадача второго уровня",
+    "parentId": "child-4-1",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000015000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-4-3",
+    "content": "Подзадача третьего уровня",
+    "parentId": "child-4-2",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000016000,
+    "motivationWord": null
+  },
+  {
+    "id": "root-5",
+    "content": "Корневая задача 5 - Вариант: Фон группы",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 4,
+    "createdAt": 1700000017000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-5-1",
+    "content": "Подзадача первого уровня",
+    "parentId": "root-5",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000018000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-5-2",
+    "content": "Подзадача второго уровня",
+    "parentId": "child-5-1",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000019000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-5-3",
+    "content": "Подзадача третьего уровня",
+    "parentId": "child-5-2",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000020000,
+    "motivationWord": null
+  },
+  {
+    "id": "root-6",
+    "content": "Корневая задача 6 - Вариант: Комбинация",
+    "parentId": null,
+    "completed": false,
+    "completedAt": null,
+    "order": 5,
+    "createdAt": 1700000021000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-6-1",
+    "content": "Подзадача первого уровня",
+    "parentId": "root-6",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000022000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-6-2",
+    "content": "Подзадача второго уровня",
+    "parentId": "child-6-1",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000023000,
+    "motivationWord": null
+  },
+  {
+    "id": "child-6-3",
+    "content": "Подзадача третьего уровня",
+    "parentId": "child-6-2",
+    "completed": false,
+    "completedAt": null,
+    "order": 0,
+    "createdAt": 1700000024000,
+    "motivationWord": null
+  }
+]

@@ -1,14 +1,16 @@
 const path = require('path');
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu, globalShortcut } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, globalShortcut, dialog } = require('electron');
 const { computeWindowBoundsForRightEdge } = require('./src/utils/positioning');
 const { readSettings, writeSettings, isFirstRun } = require('./src/store/settingsStore');
 const { buildOverlayCssVariables } = require('./src/utils/style');
 const { createTrayIcon } = require('./src/utils/trayIcon');
 const { getMode, getAllModes } = require('./src/config/modes');
 const { updateCounter, getFormattedCounter, getFormattedStats, resetDisplayCounters } = require('./src/utils/counters');
+const { readTodos, createTodo, updateTodo, deleteTodo, reorderTodos, loadTodosFromFile, ensureDemoTodos } = require('./src/store/todoStore');
 
 let mainWindow = null;
 let settingsWindow = null;
+let todoWindow = null;
 let tray = null;
 let overlayCssKey = null;
 let currentSettings = null;
@@ -203,6 +205,45 @@ function createSettingsWindow() {
   settingsWindow.loadFile(path.join(__dirname, 'settings.html'));
 }
 
+function createTodoWindow() {
+  if (todoWindow && !todoWindow.isDestroyed()) {
+    todoWindow.focus();
+    return;
+  }
+  todoWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    resizable: true,
+    minimizable: true,
+    maximizable: true,
+    show: false,
+    title: 'Todo List',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, 'preload', 'todoPreload.js')
+    }
+  });
+  todoWindow.once('ready-to-show', () => {
+    ensureDemoTodos();
+    todoWindow.maximize();
+    todoWindow.show();
+    if (process.env.INTEGRATION_TEST) {
+      setTimeout(() => {
+        app.quit();
+      }, 300);
+    }
+  });
+  todoWindow.on('closed', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+    todoWindow = null;
+  });
+  todoWindow.loadFile(path.join(__dirname, 'todo.html'));
+}
+
 function createTray() {
   if (!currentSettings) currentSettings = readSettings();
   if (!currentSettings.showTray) return;
@@ -321,6 +362,98 @@ function registerIpc() {
     }
     
     return true;
+  });
+  
+  ipcMain.handle('get-todos', () => {
+    return readTodos();
+  });
+  
+  ipcMain.handle('create-todo', (_event, content, parentId) => {
+    const todo = createTodo(content, parentId);
+    if (todoWindow && !todoWindow.isDestroyed()) {
+      todoWindow.webContents.send('todos-updated', readTodos());
+    }
+    return todo;
+  });
+  
+  ipcMain.handle('update-todo', (_event, id, updates) => {
+    const todo = updateTodo(id, updates);
+    if (todoWindow && !todoWindow.isDestroyed()) {
+      todoWindow.webContents.send('todos-updated', readTodos());
+    }
+    return todo;
+  });
+  
+  ipcMain.handle('delete-todo', (_event, id) => {
+    deleteTodo(id);
+    if (todoWindow && !todoWindow.isDestroyed()) {
+      todoWindow.webContents.send('todos-updated', readTodos());
+    }
+    return true;
+  });
+  
+  ipcMain.handle('reorder-todos', (_event, todoIds) => {
+    const todos = reorderTodos(todoIds);
+    if (todoWindow && !todoWindow.isDestroyed()) {
+      todoWindow.webContents.send('todos-updated', todos);
+    }
+    return todos;
+  });
+  
+  ipcMain.handle('start-timer', (_event, motivationWord) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('timer-started', { motivationWord });
+    }
+    return true;
+  });
+  
+  ipcMain.handle('load-todos-from-file', async () => {
+    if (!todoWindow || todoWindow.isDestroyed()) {
+      return { success: false, error: 'Window not available' };
+    }
+    
+    const result = await dialog.showOpenDialog(todoWindow, {
+      title: 'Выберите файл с задачами',
+      filters: [
+        { name: 'JSON файлы', extensions: ['json'] },
+        { name: 'Все файлы', extensions: ['*'] }
+      ],
+      properties: ['openFile']
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'File not selected' };
+    }
+    
+    const filePath = result.filePaths[0];
+    const success = loadTodosFromFile(filePath);
+    if (success) {
+      todoWindow.webContents.send('todos-updated', readTodos());
+    }
+    return { success, error: success ? null : 'Failed to load file' };
+  });
+  
+  ipcMain.handle('load-demo-todos', () => {
+    const demoPath = path.join(__dirname, 'demo-todos.json');
+    const success = loadTodosFromFile(demoPath);
+    if (success && todoWindow && !todoWindow.isDestroyed()) {
+      todoWindow.webContents.send('todos-updated', readTodos());
+    } else if (!success) {
+      ensureDemoTodos();
+      if (todoWindow && !todoWindow.isDestroyed()) {
+        todoWindow.webContents.send('todos-updated', readTodos());
+      }
+    }
+    return success || true;
+  });
+  
+  ipcMain.handle('load-large-demo', () => {
+    const demoPath = path.join(__dirname, 'demo-todos-large.json');
+    const success = loadTodosFromFile(demoPath);
+    if (success && todoWindow && !todoWindow.isDestroyed()) {
+      todoWindow.webContents.send('todos-updated', readTodos());
+    }
+    return success;
   });
   
   ipcMain.on('update-settings', async (_event, patch) => {
@@ -567,15 +700,12 @@ app.whenReady().then(() => {
   }
   
   createWindow();
+  createTodoWindow();
   createTray();
   
-  // Start counter timer
   startCounterTimer();
-  
-  // Register reset hotkey
   registerResetHotkey();
   
-  // Show settings on first run
   if (isFirstRun()) {
     setTimeout(() => {
       createSettingsWindow();
