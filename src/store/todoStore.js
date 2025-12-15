@@ -16,7 +16,15 @@ function readTodos() {
     }
     const raw = fs.readFileSync(file, 'utf8');
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map(todo => {
+      if (todo.collapsed === undefined) {
+        todo.collapsed = false;
+      }
+      return todo;
+    });
   } catch {
     return [];
   }
@@ -47,7 +55,8 @@ function createTodo(content, parentId = null) {
     completedAt: null,
     order: maxOrder + 1,
     createdAt: Date.now(),
-    motivationWord: null
+    motivationWord: null,
+    collapsed: false
   };
   
   todos.push(newTodo);
@@ -121,7 +130,8 @@ function ensureDemoTodos() {
       completedAt: null,
       order: 0,
       createdAt: Date.now(),
-      motivationWord: null
+      motivationWord: null,
+      collapsed: false
     },
     {
       id: randomUUID(),
@@ -131,7 +141,8 @@ function ensureDemoTodos() {
       completedAt: null,
       order: 1,
       createdAt: Date.now(),
-      motivationWord: null
+      motivationWord: null,
+      collapsed: false
     },
     {
       id: randomUUID(),
@@ -141,7 +152,8 @@ function ensureDemoTodos() {
       completedAt: null,
       order: 2,
       createdAt: Date.now(),
-      motivationWord: null
+      motivationWord: null,
+      collapsed: false
     }
   ];
   

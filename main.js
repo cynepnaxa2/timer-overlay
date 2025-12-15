@@ -431,6 +431,17 @@ function registerIpc() {
     return todos;
   });
   
+  ipcMain.handle('toggle-task-collapse', (_event, taskId) => {
+    const todos = readTodos();
+    const task = todos.find(t => t.id === taskId);
+    if (!task) return null;
+    const updated = updateTodo(taskId, { collapsed: !task.collapsed });
+    if (todoWindow && !todoWindow.isDestroyed()) {
+      todoWindow.webContents.send('todos-updated', readTodos());
+    }
+    return updated;
+  });
+  
   ipcMain.handle('start-timer', (_event, motivationWord) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('timer-started', { motivationWord });

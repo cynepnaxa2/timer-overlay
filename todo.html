@@ -21,6 +21,15 @@
         width: 100%;
         position: relative;
       }
+      #hierarchy-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+      }
       .task {
         width: 100%;
         min-height: 40px;
@@ -33,6 +42,28 @@
         flex-shrink: 0;
         width: 10px;
         min-width: 10px;
+      }
+      .task-expander {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        cursor: pointer;
+        padding-top: 2px;
+        color: inherit;
+        user-select: none;
+      }
+      .task-expander:hover {
+        opacity: 0.8;
+      }
+      .task-expander-icon {
+        font-size: 12px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .hierarchy-line {
         position: absolute;
@@ -54,6 +85,14 @@
         border-radius: 50%;
         pointer-events: none;
         z-index: 1;
+      }
+      .hierarchy-svg-line {
+        stroke: rgba(255, 255, 255, 0.7);
+        stroke-width: 1;
+        fill: none;
+      }
+      .hierarchy-svg-dot {
+        fill: rgba(255, 255, 255, 0.9);
       }
       .task-content {
         position: relative;
@@ -112,7 +151,9 @@
     </style>
   </head>
   <body>
-    <div id="todo-container"></div>
+    <div id="todo-container">
+      <svg id="hierarchy-svg"></svg>
+    </div>
     <script>
       const COLORS = ['#8B00FF', '#0000FF', '#00FFFF', '#00FF00', '#FFFF00', '#FF7F00', '#FF0000'];
       
@@ -139,6 +180,14 @@
           current = parent;
         }
         return ancestors.reverse();
+      }
+      
+      function isTaskVisible(task, todos) {
+        if (!task.parentId) return true;
+        const parent = todos.find(t => t.id === task.parentId);
+        if (!parent) return true;
+        if (parent.collapsed) return false;
+        return isTaskVisible(parent, todos);
       }
       
       function shouldContinueAncestorLine(ancestor, currentTask, todos) {
@@ -275,6 +324,12 @@
             clearTimeout(updateTimeout);
             updateTimeout = setTimeout(() => {
               window.todoApi.updateTodo(taskId, { content: element.innerHTML });
+              if (currentTodos) {
+                const container = document.getElementById('todo-container');
+                if (container) {
+                  setTimeout(() => drawHierarchyLines(currentTodos, container), 50);
+                }
+              }
             }, 300);
           }
         });
@@ -363,6 +418,37 @@
         return actionsEl;
       }
       
+      function createTaskExpander(task, todos) {
+        const expanderEl = document.createElement('div');
+        expanderEl.className = 'task-expander';
+        expanderEl.dataset.taskId = task.id;
+        
+        const iconEl = document.createElement('div');
+        iconEl.className = 'task-expander-icon';
+        
+        const hasChildrenTasks = hasChildren(task, todos);
+        if (!hasChildrenTasks) {
+          iconEl.textContent = '•';
+        } else if (task.collapsed) {
+          iconEl.textContent = '▶';
+        } else {
+          iconEl.textContent = '▼';
+        }
+        
+        expanderEl.appendChild(iconEl);
+        
+        if (hasChildrenTasks) {
+          expanderEl.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await window.todoApi.toggleTaskCollapse(task.id);
+            const updatedTodos = await window.todoApi.getTodos();
+            renderTasks(updatedTodos);
+          });
+        }
+        
+        return expanderEl;
+      }
+      
       function hasChildren(task, todos) {
         return todos.some(t => t.parentId === task.id && !t.completed);
       }
@@ -400,9 +486,35 @@
         return getLastDescendant(children[children.length - 1], todos);
       }
       
+      function getLastVisibleDescendant(task, todos) {
+        if (task.collapsed) return task;
+        const children = todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos)).sort((a, b) => (a.order || 0) - (b.order || 0));
+        if (children.length === 0) return task;
+        return getLastVisibleDescendant(children[children.length - 1], todos);
+      }
+      
+      function getExpanderPosition(taskId, container) {
+        const expanderEl = container.querySelector(`.task-expander[data-task-id="${taskId}"]`);
+        if (!expanderEl) return null;
+        const rect = expanderEl.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        return {
+          top: rect.top - containerRect.top + container.scrollTop,
+          bottom: rect.bottom - containerRect.top + container.scrollTop,
+          height: rect.height
+        };
+      }
+      
       function drawHierarchyLines(todos, container) {
-        container.querySelectorAll('.hierarchy-line').forEach(el => el.remove());
-        container.querySelectorAll('.hierarchy-dot').forEach(el => el.remove());
+        const svg = container.querySelector('#hierarchy-svg');
+        if (!svg) return;
+        
+        while (svg.firstChild) {
+          svg.removeChild(svg.firstChild);
+        }
+        
+        const containerRect = container.getBoundingClientRect();
+        const scrollTop = container.scrollTop;
         
         const taskElements = Array.from(container.querySelectorAll('.task'));
         const taskElementMap = new Map();
@@ -415,42 +527,34 @@
           }
         });
         
-        const getTaskPosition = (taskId) => {
+        const getTaskRect = (taskId) => {
           const el = taskElementMap.get(taskId);
           if (!el) return null;
           const rect = el.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
           return {
-            top: rect.top - containerRect.top + container.scrollTop,
+            top: rect.top - containerRect.top + scrollTop,
             height: rect.height,
-            center: rect.top - containerRect.top + container.scrollTop + rect.height / 2,
-            bottom: rect.top - containerRect.top + container.scrollTop + rect.height
+            center: rect.top - containerRect.top + scrollTop + rect.height / 2,
+            bottom: rect.top - containerRect.top + scrollTop + rect.height
           };
         };
         
-        const getTaskIndex = (taskId) => {
-          return tasksInOrder.findIndex(t => t.id === taskId);
+        const getExpanderRect = (taskId) => {
+          const expanderEl = container.querySelector(`.task-expander[data-task-id="${taskId}"]`);
+          if (!expanderEl) return null;
+          const rect = expanderEl.getBoundingClientRect();
+          return {
+            top: rect.top - containerRect.top + scrollTop,
+            bottom: rect.bottom - containerRect.top + scrollTop,
+            height: rect.height
+          };
         };
         
-        const findNextSiblingAtLevel = (taskId, targetLevel, startIndex) => {
-          for (let i = startIndex + 1; i < tasksInOrder.length; i++) {
-            const nextTaskId = tasksInOrder[i].id;
-            const nextTask = todos.find(t => t.id === nextTaskId && !t.completed);
-            if (!nextTask) continue;
-            const nextTaskLevel = calculateLevel(nextTask, todos);
-            if (nextTaskLevel === targetLevel) {
-              return nextTask;
-            }
-            if (nextTaskLevel < targetLevel) {
-              return null;
-            }
-          }
-          return null;
-        };
+        const visibleTasks = todos.filter(t => !t.completed && isTaskVisible(t, todos));
         
-        todos.filter(t => !t.completed).forEach(task => {
-          const taskPos = getTaskPosition(task.id);
-          if (!taskPos) return;
+        visibleTasks.forEach(task => {
+          const taskRect = getTaskRect(task.id);
+          if (!taskRect) return;
           
           const level = calculateLevel(task, todos);
           const lineX = 9 + level * 10;
@@ -461,37 +565,41 @@
               const parentLevel = calculateLevel(parent, todos);
               const parentLineX = 9 + parentLevel * 10;
               
-              const horizontalLine = document.createElement('div');
-              horizontalLine.className = 'hierarchy-line hierarchy-line-horizontal';
-              horizontalLine.style.left = `${parentLineX}px`;
-              horizontalLine.style.top = `${taskPos.center}px`;
-              horizontalLine.style.width = `${10}px`;
-              container.appendChild(horizontalLine);
+              const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+              horizontalLine.setAttribute('x1', parentLineX);
+              horizontalLine.setAttribute('y1', taskRect.center);
+              horizontalLine.setAttribute('x2', parentLineX + 10);
+              horizontalLine.setAttribute('y2', taskRect.center);
+              horizontalLine.setAttribute('class', 'hierarchy-svg-line');
+              svg.appendChild(horizontalLine);
               
-              const dot = document.createElement('div');
-              dot.className = 'hierarchy-dot';
-              dot.style.left = `${parentLineX + 10 - 2}px`;
-              dot.style.top = `${taskPos.center - 2}px`;
-              container.appendChild(dot);
+              const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              dot.setAttribute('cx', parentLineX + 10);
+              dot.setAttribute('cy', taskRect.center);
+              dot.setAttribute('r', 2);
+              dot.setAttribute('class', 'hierarchy-svg-dot');
+              svg.appendChild(dot);
             }
           } else {
-            const horizontalLine = document.createElement('div');
-            horizontalLine.className = 'hierarchy-line hierarchy-line-horizontal';
-            horizontalLine.style.left = `${lineX}px`;
-            horizontalLine.style.top = `${taskPos.center}px`;
-            horizontalLine.style.width = `${10}px`;
-            container.appendChild(horizontalLine);
+            const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            horizontalLine.setAttribute('x1', lineX);
+            horizontalLine.setAttribute('y1', taskRect.center);
+            horizontalLine.setAttribute('x2', lineX + 10);
+            horizontalLine.setAttribute('y2', taskRect.center);
+            horizontalLine.setAttribute('class', 'hierarchy-svg-line');
+            svg.appendChild(horizontalLine);
             
-            const dot = document.createElement('div');
-            dot.className = 'hierarchy-dot';
-            dot.style.left = `${lineX - 2}px`;
-            dot.style.top = `${taskPos.center - 2}px`;
-            container.appendChild(dot);
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', lineX);
+            dot.setAttribute('cy', taskRect.center);
+            dot.setAttribute('r', 2);
+            dot.setAttribute('class', 'hierarchy-svg-dot');
+            svg.appendChild(dot);
           }
         });
         
         const drawnVerticalLines = new Set();
-        const parentTasks = todos.filter(t => !t.completed && hasChildren(t, todos));
+        const parentTasks = visibleTasks.filter(t => hasChildren(t, todos));
         
         parentTasks.forEach(parentTask => {
           const parentLevel = calculateLevel(parentTask, todos);
@@ -499,42 +607,65 @@
           if (drawnVerticalLines.has(lineKey)) return;
           drawnVerticalLines.add(lineKey);
           
-          const parentPos = getTaskPosition(parentTask.id);
-          if (!parentPos) return;
+          const parentRect = getTaskRect(parentTask.id);
+          if (!parentRect) return;
           
-          const parentIndex = getTaskIndex(parentTask.id);
+          const parentIndex = tasksInOrder.findIndex(t => t.id === parentTask.id);
           if (parentIndex === -1) return;
           
-          const nextSibling = findNextSiblingAtLevel(parentTask.id, parentLevel, parentIndex);
+          const lineX = 9 + parentLevel * 10;
+          let lineTop, lineBottom;
           
-          let lineBottom;
-          if (nextSibling) {
-            const nextSiblingPos = getTaskPosition(nextSibling.id);
-            if (nextSiblingPos) {
-              lineBottom = nextSiblingPos.top;
+          if (!parentTask.collapsed) {
+            const expanderRect = getExpanderRect(parentTask.id);
+            if (expanderRect) {
+              lineTop = expanderRect.bottom;
             } else {
-              const lastDescendant = getLastDescendant(parentTask, todos);
-              const lastDescendantPos = getTaskPosition(lastDescendant.id);
-              lineBottom = lastDescendantPos ? lastDescendantPos.center : parentPos.center;
+              lineTop = parentRect.top;
+            }
+            
+            const lastVisibleDescendant = getLastVisibleDescendant(parentTask, todos);
+            const lastDescendantRect = getTaskRect(lastVisibleDescendant.id);
+            if (lastDescendantRect) {
+              lineBottom = lastDescendantRect.center;
+            } else {
+              lineBottom = parentRect.center;
             }
           } else {
-            const lastDescendant = getLastDescendant(parentTask, todos);
-            const lastDescendantPos = getTaskPosition(lastDescendant.id);
-            if (lastDescendantPos) {
-              lineBottom = lastDescendantPos.center;
-            } else {
-              lineBottom = parentPos.center;
+            for (let i = parentIndex + 1; i < tasksInOrder.length; i++) {
+              const nextTaskId = tasksInOrder[i].id;
+              const nextTask = todos.find(t => t.id === nextTaskId && !t.completed && isTaskVisible(t, todos));
+              if (!nextTask) continue;
+              const nextTaskLevel = calculateLevel(nextTask, todos);
+              if (nextTaskLevel === parentLevel) {
+                const nextTaskRect = getTaskRect(nextTask.id);
+                if (nextTaskRect) {
+                  lineTop = parentRect.top;
+                  lineBottom = nextTaskRect.top;
+                  break;
+                }
+              }
+              if (nextTaskLevel < parentLevel) {
+                return;
+              }
             }
+            if (lineTop === undefined) return;
           }
           
-          const lineX = 9 + parentLevel * 10;
-          const verticalLine = document.createElement('div');
-          verticalLine.className = 'hierarchy-line hierarchy-line-vertical';
-          verticalLine.style.left = `${lineX}px`;
-          verticalLine.style.top = `${parentPos.center}px`;
-          verticalLine.style.height = `${Math.max(0, lineBottom - parentPos.center)}px`;
-          container.appendChild(verticalLine);
+          if (lineTop !== undefined && lineBottom !== undefined && lineBottom > lineTop) {
+            const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            verticalLine.setAttribute('x1', lineX);
+            verticalLine.setAttribute('y1', lineTop);
+            verticalLine.setAttribute('x2', lineX);
+            verticalLine.setAttribute('y2', lineBottom);
+            verticalLine.setAttribute('class', 'hierarchy-svg-line');
+            svg.appendChild(verticalLine);
+          }
         });
+        
+        const containerHeight = Math.max(container.scrollHeight, containerRect.height);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', `${containerHeight}px`);
       }
       
       function renderTask(task, todos, container) {
@@ -550,6 +681,7 @@
             taskEl.classList.add('has-parent');
           }
           
+          const expanderEl = createTaskExpander(task, todos);
           const hierarchyEl = createTaskHierarchy(task, todos);
           
           const contentEl = document.createElement('div');
@@ -568,6 +700,7 @@
           
           const actionsEl = createTaskActions(task.id);
           
+          taskEl.appendChild(expanderEl);
           taskEl.appendChild(hierarchyEl);
           taskEl.appendChild(contentEl);
           taskEl.appendChild(actionsEl);
@@ -577,7 +710,9 @@
           requestAnimationFrame(() => {
             autoResize(contentEl);
             setTimeout(() => {
-              drawHierarchyLines(currentTodos, container);
+              if (currentTodos) {
+                drawHierarchyLines(currentTodos, container);
+              }
             }, 0);
           });
         } else {
@@ -595,6 +730,31 @@
             requestAnimationFrame(() => {
               autoResize(contentEl);
             });
+          }
+          let expanderEl = taskEl.querySelector('.task-expander');
+          if (!expanderEl) {
+            expanderEl = createTaskExpander(task, todos);
+            const hierarchyEl = taskEl.querySelector('.task-hierarchy');
+            if (hierarchyEl) {
+              taskEl.insertBefore(expanderEl, hierarchyEl);
+            } else {
+              const contentEl = taskEl.querySelector('.task-content');
+              if (contentEl) {
+                taskEl.insertBefore(expanderEl, contentEl);
+              }
+            }
+          } else {
+            const iconEl = expanderEl.querySelector('.task-expander-icon');
+            if (iconEl) {
+              const hasChildrenTasks = hasChildren(task, todos);
+              if (!hasChildrenTasks) {
+                iconEl.textContent = '•';
+              } else if (task.collapsed) {
+                iconEl.textContent = '▶';
+              } else {
+                iconEl.textContent = '▼';
+              }
+            }
           }
           let hierarchyEl = taskEl.querySelector('.task-hierarchy');
           if (!hierarchyEl) {
@@ -638,9 +798,11 @@
           }
         }
         
-        const children = todos.filter(t => t.parentId === task.id && !t.completed);
-        children.sort((a, b) => (a.order || 0) - (b.order || 0));
-        children.forEach(child => renderTask(child, todos, container));
+        if (!task.collapsed) {
+          const children = todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos));
+          children.sort((a, b) => (a.order || 0) - (b.order || 0));
+          children.forEach(child => renderTask(child, todos, container));
+        }
       }
       
       function renderTasks(todos, preserveExisting = false) {
@@ -665,7 +827,7 @@
           });
         }
         
-        const rootTasks = todos.filter(t => !t.parentId && !t.completed);
+        const rootTasks = todos.filter(t => !t.parentId && !t.completed && isTaskVisible(t, todos));
         rootTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
         
         rootTasks.forEach(task => renderTask(task, todos, container));
@@ -679,7 +841,20 @@
           });
           setTimeout(() => {
             drawHierarchyLines(todos, container);
-          }, 0);
+          }, 50);
+        });
+      }
+      
+      let scrollTimeout = null;
+      const container = document.getElementById('todo-container');
+      if (container) {
+        container.addEventListener('scroll', () => {
+          if (scrollTimeout) clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(() => {
+            if (currentTodos) {
+              drawHierarchyLines(currentTodos, container);
+            }
+          }, 50);
         });
       }
       

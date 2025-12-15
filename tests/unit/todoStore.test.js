@@ -46,7 +46,18 @@ describe('todoStore', () => {
       fs.writeFileSync(todosFile, JSON.stringify(testTodos), 'utf8');
       
       const todos = todoStore.readTodos();
-      expect(todos).toEqual(testTodos);
+      expect(todos[0].collapsed).toBe(false);
+    });
+    
+    test('adds collapsed field to old todos without it', () => {
+      const todosFile = path.join(testDir, 'todos.json');
+      const testTodos = [
+        { id: '1', content: 'Test', parentId: null, completed: false, order: 0 }
+      ];
+      fs.writeFileSync(todosFile, JSON.stringify(testTodos), 'utf8');
+      
+      const todos = todoStore.readTodos();
+      expect(todos[0].collapsed).toBe(false);
     });
 
     test('returns empty array on invalid JSON', () => {
@@ -86,6 +97,7 @@ describe('todoStore', () => {
       expect(todo.order).toBe(0);
       expect(todo.createdAt).toBeGreaterThan(0);
       expect(todo.motivationWord).toBeNull();
+      expect(todo.collapsed).toBe(false);
     });
 
     test('creates todo with parentId', () => {
@@ -144,6 +156,15 @@ describe('todoStore', () => {
       
       const todos = todoStore.readTodos();
       expect(todos[0].content).toBe('Updated');
+    });
+    
+    test('updates collapsed field', () => {
+      const todo = todoStore.createTodo('Test');
+      const updated = todoStore.updateTodo(todo.id, { collapsed: true });
+      
+      expect(updated.collapsed).toBe(true);
+      const todos = todoStore.readTodos();
+      expect(todos[0].collapsed).toBe(true);
     });
   });
 
