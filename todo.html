@@ -356,7 +356,7 @@
               horizontalLine.className = 'hierarchy-line hierarchy-line-horizontal';
               horizontalLine.style.left = `${lineX}px`;
               horizontalLine.style.top = `${taskPos.center}px`;
-              horizontalLine.style.width = `${11}px`;
+              horizontalLine.style.width = `${20}px`;
               container.appendChild(horizontalLine);
             }
           }
@@ -371,11 +371,18 @@
             const lastDescendant = getLastDescendant(task, todos);
             const lastDescendantPos = getTaskPosition(lastDescendant.id);
             if (lastDescendantPos) {
+              const isLastChildTask = isLastChild(lastDescendant, todos);
+              let lineBottom = lastDescendantPos.bottom;
+              
+              if (isLastChildTask) {
+                lineBottom = lastDescendantPos.center;
+              }
+              
               const verticalLine = document.createElement('div');
               verticalLine.className = 'hierarchy-line hierarchy-line-vertical';
               verticalLine.style.left = `${lineX}px`;
               verticalLine.style.top = `${taskPos.center}px`;
-              verticalLine.style.height = `${Math.max(0, lastDescendantPos.bottom - taskPos.center)}px`;
+              verticalLine.style.height = `${Math.max(0, lineBottom - taskPos.center)}px`;
               container.appendChild(verticalLine);
             }
           }
@@ -400,11 +407,18 @@
                 drawnVerticalLines.add(lineKey);
                 const lineX = 9 + parentLevel * 20;
                 
+                const isLastDescendantLastChild = isLastChild(lastDescendant, todos);
+                let lineBottom = lastDescendantPos.bottom;
+                
+                if (isLastDescendantLastChild) {
+                  lineBottom = lastDescendantPos.center;
+                }
+                
                 const parentVerticalLine = document.createElement('div');
                 parentVerticalLine.className = 'hierarchy-line hierarchy-line-vertical';
                 parentVerticalLine.style.left = `${lineX}px`;
                 parentVerticalLine.style.top = `${parentPos.center}px`;
-                parentVerticalLine.style.height = `${Math.max(0, lastDescendantPos.bottom - parentPos.center)}px`;
+                parentVerticalLine.style.height = `${Math.max(0, lineBottom - parentPos.center)}px`;
                 container.appendChild(parentVerticalLine);
               }
             }
@@ -424,11 +438,18 @@
               drawnVerticalLines.add(lineKey);
               const lineX = 9 + parentLevel * 20;
               
+              const isLastDescendantLastChild = isLastChild(lastDescendant, todos);
+              let lineBottom = lastDescendantPos.bottom;
+              
+              if (isLastDescendantLastChild) {
+                lineBottom = lastDescendantPos.center;
+              }
+              
               const parentVerticalLine = document.createElement('div');
               parentVerticalLine.className = 'hierarchy-line hierarchy-line-vertical';
               parentVerticalLine.style.left = `${lineX}px`;
               parentVerticalLine.style.top = `${parentPos.center}px`;
-              parentVerticalLine.style.height = `${Math.max(0, lastDescendantPos.bottom - parentPos.center)}px`;
+              parentVerticalLine.style.height = `${Math.max(0, lineBottom - parentPos.center)}px`;
               container.appendChild(parentVerticalLine);
             }
           }
@@ -453,6 +474,7 @@
           const contentEl = document.createElement('div');
           contentEl.className = 'task-content';
           contentEl.contentEditable = 'true';
+          contentEl.spellcheck = false;
           contentEl.innerHTML = task.content || '';
           
           contentEl.setAttribute('data-click-handler', 'true');
@@ -485,6 +507,9 @@
           }
           const contentEl = taskEl.querySelector('.task-content');
           if (contentEl && contentEl !== focusedElement) {
+            if (contentEl.contentEditable === 'true') {
+              contentEl.spellcheck = false;
+            }
             contentEl.innerHTML = task.content || '';
             requestAnimationFrame(() => {
               autoResize(contentEl);

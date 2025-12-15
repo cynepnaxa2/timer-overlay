@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('todoApi', {
   loadTodosFromFile: () => ipcRenderer.invoke('load-todos-from-file'),
   loadDemoTodos: () => ipcRenderer.invoke('load-demo-todos'),
   loadLargeDemo: () => ipcRenderer.invoke('load-large-demo'),
+  captureScreenshot: () => ipcRenderer.invoke('capture-todo-screenshot'),
   onTodosUpdated: (callback) => {
     ipcRenderer.on('todos-updated', (_event, todos) => callback(todos));
   }

@@ -12,6 +12,7 @@
     "test": "jest",
     "test:unit": "jest --selectProjects unit",
     "test:integration": "jest --selectProjects integration",
+    "test:screenshot": "jest tests/integration/hierarchyVisualization.test.js",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:portable": "electron-builder --win dir",

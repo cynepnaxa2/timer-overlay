@@ -222,14 +222,45 @@ function createTodoWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(__dirname, 'preload', 'todoPreload.js')
+      preload: path.join(__dirname, 'preload', 'todoPreload.js'),
+      spellcheck: false
     }
   });
-  todoWindow.once('ready-to-show', () => {
+  todoWindow.once('ready-to-show', async () => {
     ensureDemoTodos();
     todoWindow.maximize();
     todoWindow.show();
-    if (process.env.INTEGRATION_TEST) {
+    
+    if (process.env.CAPTURE_SCREENSHOT) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        await todoWindow.webContents.executeJavaScript(`
+          (async () => {
+            if (window.todoApi) {
+              await window.todoApi.loadLargeDemo();
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          })()
+        `);
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const image = await todoWindow.capturePage();
+        const buffer = image.toPNG();
+        const screenshotPath = path.join(__dirname, 'test-screenshots', 'hierarchy-visualization.png');
+        const fs = require('fs');
+        await fs.promises.mkdir(path.dirname(screenshotPath), { recursive: true });
+        await fs.promises.writeFile(screenshotPath, buffer);
+        console.log('Screenshot saved to:', screenshotPath);
+      } catch (err) {
+        console.error('Failed to capture screenshot:', err);
+      }
+      
+      setTimeout(() => {
+        app.quit();
+      }, 500);
+    } else if (process.env.INTEGRATION_TEST) {
       setTimeout(() => {
         app.quit();
       }, 300);
@@ -454,6 +485,19 @@ function registerIpc() {
       todoWindow.webContents.send('todos-updated', readTodos());
     }
     return success;
+  });
+  
+  ipcMain.handle('capture-todo-screenshot', async () => {
+    if (!todoWindow || todoWindow.isDestroyed()) {
+      return null;
+    }
+    try {
+      const image = await todoWindow.capturePage();
+      return image.toPNG();
+    } catch (err) {
+      console.error('Failed to capture screenshot:', err);
+      return null;
+    }
   });
   
   ipcMain.on('update-settings', async (_event, patch) => {
