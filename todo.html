@@ -187,6 +187,74 @@
       let focusedTaskId = null;
       let activeTaskId = null;
       let currentTodos = [];
+      let todoHotkeys = {
+        addSubtask: 'Insert',
+        execute: 'F5',
+        complete: 'Delete'
+      };
+      
+      function parseHotkey(hotkeyString) {
+        const parts = hotkeyString.split('+').map(p => p.trim());
+        const modifiers = {
+          ctrl: false,
+          alt: false,
+          shift: false,
+          meta: false
+        };
+        let key = null;
+        
+        for (const part of parts) {
+          const lower = part.toLowerCase();
+          if (lower === 'ctrl' || lower === 'control') {
+            modifiers.ctrl = true;
+          } else if (lower === 'alt') {
+            modifiers.alt = true;
+          } else if (lower === 'shift') {
+            modifiers.shift = true;
+          } else if (lower === 'meta' || lower === 'cmd') {
+            modifiers.meta = true;
+          } else {
+            key = part;
+          }
+        }
+        
+        return { modifiers, key };
+      }
+      
+      function matchesHotkey(event, hotkeyString) {
+        const parsed = parseHotkey(hotkeyString);
+        const eventKey = event.key;
+        const eventCode = event.code;
+        
+        const keyMap = {
+          'Insert': 'Insert',
+          'Delete': 'Delete',
+          'F5': 'F5',
+          'Enter': 'Enter',
+          'Space': ' ',
+          'Esc': 'Escape'
+        };
+        
+        let keyMatches = false;
+        if (keyMap[parsed.key]) {
+          keyMatches = keyMap[parsed.key] === eventKey;
+        } else if (parsed.key && parsed.key.length === 1) {
+          keyMatches = parsed.key.toLowerCase() === eventKey.toLowerCase() || 
+                       parsed.key === eventKey ||
+                       parsed.key === eventCode;
+        } else {
+          keyMatches = parsed.key === eventKey || parsed.key === eventCode;
+        }
+        
+        if (!keyMatches) return false;
+        
+        if (parsed.modifiers.ctrl !== event.ctrlKey) return false;
+        if (parsed.modifiers.alt !== event.altKey) return false;
+        if (parsed.modifiers.shift !== event.shiftKey) return false;
+        if (parsed.modifiers.meta !== event.metaKey) return false;
+        
+        return true;
+      }
       
       function setupRichEditor(element, taskId) {
         element.addEventListener('focus', () => {
@@ -338,10 +406,12 @@
         
         const taskElements = Array.from(container.querySelectorAll('.task'));
         const taskElementMap = new Map();
+        const tasksInOrder = [];
         taskElements.forEach(el => {
           const taskId = el.dataset.taskId;
           if (taskId) {
             taskElementMap.set(taskId, el);
+            tasksInOrder.push({ id: taskId, element: el });
           }
         });
         
@@ -358,13 +428,32 @@
           };
         };
         
-        const drawnVerticalLines = new Set();
+        const getTaskIndex = (taskId) => {
+          return tasksInOrder.findIndex(t => t.id === taskId);
+        };
+        
+        const findNextSiblingAtLevel = (taskId, targetLevel, startIndex) => {
+          for (let i = startIndex + 1; i < tasksInOrder.length; i++) {
+            const nextTaskId = tasksInOrder[i].id;
+            const nextTask = todos.find(t => t.id === nextTaskId && !t.completed);
+            if (!nextTask) continue;
+            const nextTaskLevel = calculateLevel(nextTask, todos);
+            if (nextTaskLevel === targetLevel) {
+              return nextTask;
+            }
+            if (nextTaskLevel < targetLevel) {
+              return null;
+            }
+          }
+          return null;
+        };
         
         todos.filter(t => !t.completed).forEach(task => {
           const taskPos = getTaskPosition(task.id);
           if (!taskPos) return;
           
           const level = calculateLevel(task, todos);
+          const lineX = 9 + level * 10;
           
           if (task.parentId) {
             const parent = todos.find(t => t.id === task.parentId);
@@ -386,106 +475,65 @@
               container.appendChild(dot);
             }
           } else {
-            const lineX = 9 + level * 10;
+            const horizontalLine = document.createElement('div');
+            horizontalLine.className = 'hierarchy-line hierarchy-line-horizontal';
+            horizontalLine.style.left = `${lineX}px`;
+            horizontalLine.style.top = `${taskPos.center}px`;
+            horizontalLine.style.width = `${10}px`;
+            container.appendChild(horizontalLine);
+            
             const dot = document.createElement('div');
             dot.className = 'hierarchy-dot';
             dot.style.left = `${lineX - 2}px`;
             dot.style.top = `${taskPos.center - 2}px`;
             container.appendChild(dot);
           }
-          
-          const hasChildrenTasks = hasChildren(task, todos);
-          if (hasChildrenTasks) {
-            const lineX = 9 + level * 10;
-            const lineKey = `v-${task.id}`;
-            if (drawnVerticalLines.has(lineKey)) return;
-            drawnVerticalLines.add(lineKey);
-            
-            const lastDescendant = getLastDescendant(task, todos);
-            const lastDescendantPos = getTaskPosition(lastDescendant.id);
-            if (lastDescendantPos) {
-              const isLastChildTask = isLastChild(lastDescendant, todos);
-              let lineBottom = lastDescendantPos.bottom;
-              
-              if (isLastChildTask) {
-                lineBottom = lastDescendantPos.center;
-              }
-              
-              const verticalLine = document.createElement('div');
-              verticalLine.className = 'hierarchy-line hierarchy-line-vertical';
-              verticalLine.style.left = `${lineX}px`;
-              verticalLine.style.top = `${taskPos.center}px`;
-              verticalLine.style.height = `${Math.max(0, lineBottom - taskPos.center)}px`;
-              container.appendChild(verticalLine);
-            }
-          }
-          
-          if (!task.parentId) return;
-          
-          const parent = todos.find(t => t.id === task.parentId);
-          if (!parent) return;
-          
-          const parentLevel = calculateLevel(parent, todos);
-          const lineKey = `p-${parent.id}`;
+        });
+        
+        const drawnVerticalLines = new Set();
+        const parentTasks = todos.filter(t => !t.completed && hasChildren(t, todos));
+        
+        parentTasks.forEach(parentTask => {
+          const parentLevel = calculateLevel(parentTask, todos);
+          const lineKey = `v-${parentTask.id}`;
           if (drawnVerticalLines.has(lineKey)) return;
+          drawnVerticalLines.add(lineKey);
           
-          const lastChild = isLastChild(task, todos);
-          if (lastChild) {
-            const hasParentChildren = hasChildren(parent, todos);
-            if (hasParentChildren) {
-              const lastDescendant = getLastDescendant(parent, todos);
-              const lastDescendantPos = getTaskPosition(lastDescendant.id);
-              const parentPos = getTaskPosition(parent.id);
-              if (parentPos && lastDescendantPos) {
-                drawnVerticalLines.add(lineKey);
-                const lineX = 9 + parentLevel * 10;
-                
-                const isLastDescendantLastChild = isLastChild(lastDescendant, todos);
-                let lineBottom = lastDescendantPos.bottom;
-                
-                if (isLastDescendantLastChild) {
-                  lineBottom = lastDescendantPos.center;
-                }
-                
-                const parentVerticalLine = document.createElement('div');
-                parentVerticalLine.className = 'hierarchy-line hierarchy-line-vertical';
-                parentVerticalLine.style.left = `${lineX}px`;
-                parentVerticalLine.style.top = `${parentPos.center}px`;
-                parentVerticalLine.style.height = `${Math.max(0, lineBottom - parentPos.center)}px`;
-                container.appendChild(parentVerticalLine);
-              }
-            }
-            return;
-          }
-          
-          const parentPos = getTaskPosition(parent.id);
+          const parentPos = getTaskPosition(parentTask.id);
           if (!parentPos) return;
           
-          const siblings = todos.filter(t => t.parentId === parent.id && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
-          const currentIndex = siblings.findIndex(t => t.id === task.id);
-          if (currentIndex >= 0 && currentIndex < siblings.length - 1) {
-            const lastSibling = siblings[siblings.length - 1];
-            const lastDescendant = getLastDescendant(lastSibling, todos);
+          const parentIndex = getTaskIndex(parentTask.id);
+          if (parentIndex === -1) return;
+          
+          const nextSibling = findNextSiblingAtLevel(parentTask.id, parentLevel, parentIndex);
+          
+          let lineBottom;
+          if (nextSibling) {
+            const nextSiblingPos = getTaskPosition(nextSibling.id);
+            if (nextSiblingPos) {
+              lineBottom = nextSiblingPos.top;
+            } else {
+              const lastDescendant = getLastDescendant(parentTask, todos);
+              const lastDescendantPos = getTaskPosition(lastDescendant.id);
+              lineBottom = lastDescendantPos ? lastDescendantPos.center : parentPos.center;
+            }
+          } else {
+            const lastDescendant = getLastDescendant(parentTask, todos);
             const lastDescendantPos = getTaskPosition(lastDescendant.id);
             if (lastDescendantPos) {
-              drawnVerticalLines.add(lineKey);
-              const lineX = 9 + parentLevel * 10;
-              
-              const isLastDescendantLastChild = isLastChild(lastDescendant, todos);
-              let lineBottom = lastDescendantPos.bottom;
-              
-              if (isLastDescendantLastChild) {
-                lineBottom = lastDescendantPos.center;
-              }
-              
-              const parentVerticalLine = document.createElement('div');
-              parentVerticalLine.className = 'hierarchy-line hierarchy-line-vertical';
-              parentVerticalLine.style.left = `${lineX}px`;
-              parentVerticalLine.style.top = `${parentPos.center}px`;
-              parentVerticalLine.style.height = `${Math.max(0, lineBottom - parentPos.center)}px`;
-              container.appendChild(parentVerticalLine);
+              lineBottom = lastDescendantPos.center;
+            } else {
+              lineBottom = parentPos.center;
             }
           }
+          
+          const lineX = 9 + parentLevel * 10;
+          const verticalLine = document.createElement('div');
+          verticalLine.className = 'hierarchy-line hierarchy-line-vertical';
+          verticalLine.style.left = `${lineX}px`;
+          verticalLine.style.top = `${parentPos.center}px`;
+          verticalLine.style.height = `${Math.max(0, lineBottom - parentPos.center)}px`;
+          container.appendChild(verticalLine);
         });
       }
       
@@ -642,7 +690,50 @@
         }
       });
       
+      document.addEventListener('keydown', (e) => {
+        if (focusedElement && document.activeElement === focusedElement) {
+          return;
+        }
+        
+        if (!activeTaskId) return;
+        
+        if (matchesHotkey(e, todoHotkeys.addSubtask)) {
+          e.preventDefault();
+          if (window.todoApi) {
+            window.todoApi.createTodo('', activeTaskId).then(() => {
+              return window.todoApi.getTodos();
+            }).then(todos => {
+              currentTodos = todos;
+              renderTasks(todos, true);
+            });
+          }
+        } else if (matchesHotkey(e, todoHotkeys.execute)) {
+          e.preventDefault();
+          const task = currentTodos.find(t => t.id === activeTaskId);
+          if (window.todoApi && task) {
+            window.todoApi.startTimer(task.motivationWord || null);
+          }
+        } else if (matchesHotkey(e, todoHotkeys.complete)) {
+          e.preventDefault();
+          if (window.todoApi) {
+            window.todoApi.updateTodo(activeTaskId, { 
+              completed: true, 
+              completedAt: Date.now() 
+            }).then(() => {
+              return window.todoApi.getTodos();
+            }).then(todos => {
+              currentTodos = todos;
+              renderTasks(todos, true);
+            });
+          }
+        }
+      });
+      
       if (window.todoApi) {
+        window.todoApi.getTodoHotkeys().then(hotkeys => {
+          todoHotkeys = hotkeys;
+        });
+        
         window.todoApi.getTodos().then(todos => {
           if (todos.length === 0) {
             window.todoApi.loadLargeDemo().then(() => {

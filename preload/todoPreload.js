@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('todoApi', {
   loadDemoTodos: () => ipcRenderer.invoke('load-demo-todos'),
   loadLargeDemo: () => ipcRenderer.invoke('load-large-demo'),
   captureScreenshot: () => ipcRenderer.invoke('capture-todo-screenshot'),
+  getTodoHotkeys: () => ipcRenderer.invoke('get-todo-hotkeys'),
+  setTodoHotkeys: (hotkeys) => ipcRenderer.invoke('set-todo-hotkeys', hotkeys),
   onTodosUpdated: (callback) => {
     ipcRenderer.on('todos-updated', (_event, todos) => callback(todos));
   }

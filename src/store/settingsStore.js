@@ -20,7 +20,12 @@ const DEFAULT_SETTINGS = {
     2: { showCircle: false, showSymbol: false, showCounter: true, showUnit: false },
     3: { showCircle: false, showSymbol: true, showCounter: true, showUnit: true }
   },
-  resetHotkey: 'Ctrl+Shift+R' // Горячая клавиша для сброса счетчиков
+  resetHotkey: 'Ctrl+Shift+R', // Горячая клавиша для сброса счетчиков
+  todoHotkeys: {
+    addSubtask: 'Insert',
+    execute: 'F5',
+    complete: 'Delete'
+  }
 };
 
 function getSettingsPath() {

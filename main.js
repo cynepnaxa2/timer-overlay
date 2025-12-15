@@ -500,6 +500,22 @@ function registerIpc() {
     }
   });
   
+  ipcMain.handle('get-todo-hotkeys', () => {
+    if (!currentSettings) currentSettings = readSettings();
+    return currentSettings.todoHotkeys || {
+      addSubtask: 'Insert',
+      execute: 'F5',
+      complete: 'Delete'
+    };
+  });
+  
+  ipcMain.handle('set-todo-hotkeys', (_event, hotkeys) => {
+    if (!currentSettings) currentSettings = readSettings();
+    currentSettings.todoHotkeys = hotkeys;
+    currentSettings = writeSettings(currentSettings);
+    return currentSettings.todoHotkeys;
+  });
+  
   ipcMain.on('update-settings', async (_event, patch) => {
     if (!currentSettings) currentSettings = readSettings();
     const durationChanged = 'durationSeconds' in patch;
