@@ -31,8 +31,8 @@
       .task-hierarchy {
         position: relative;
         flex-shrink: 0;
-        width: 20px;
-        min-width: 20px;
+        width: 10px;
+        min-width: 10px;
       }
       .hierarchy-line {
         position: absolute;
@@ -45,6 +45,15 @@
       }
       .hierarchy-line-horizontal {
         height: 1px;
+      }
+      .hierarchy-dot {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 1;
       }
       .task-content {
         position: relative;
@@ -301,8 +310,8 @@
         
         const hierarchyEl = document.createElement('div');
         hierarchyEl.className = 'task-hierarchy';
-        hierarchyEl.style.width = `${20 + currentLevel * 20}px`;
-        hierarchyEl.style.minWidth = `${20 + currentLevel * 20}px`;
+        hierarchyEl.style.width = `${10 + currentLevel * 10}px`;
+        hierarchyEl.style.minWidth = `${10 + currentLevel * 10}px`;
         
         return hierarchyEl;
       }
@@ -315,6 +324,7 @@
       
       function drawHierarchyLines(todos, container) {
         container.querySelectorAll('.hierarchy-line').forEach(el => el.remove());
+        container.querySelectorAll('.hierarchy-dot').forEach(el => el.remove());
         
         const taskElements = Array.from(container.querySelectorAll('.task'));
         const taskElementMap = new Map();
@@ -350,20 +360,33 @@
             const parent = todos.find(t => t.id === task.parentId);
             if (parent) {
               const parentLevel = calculateLevel(parent, todos);
-              const lineX = 9 + parentLevel * 20;
+              const parentLineX = 9 + parentLevel * 10;
               
               const horizontalLine = document.createElement('div');
               horizontalLine.className = 'hierarchy-line hierarchy-line-horizontal';
-              horizontalLine.style.left = `${lineX}px`;
+              horizontalLine.style.left = `${parentLineX}px`;
               horizontalLine.style.top = `${taskPos.center}px`;
-              horizontalLine.style.width = `${20}px`;
+              horizontalLine.style.width = `${10}px`;
               container.appendChild(horizontalLine);
+              
+              const dot = document.createElement('div');
+              dot.className = 'hierarchy-dot';
+              dot.style.left = `${parentLineX + 10 - 2}px`;
+              dot.style.top = `${taskPos.center - 2}px`;
+              container.appendChild(dot);
             }
+          } else {
+            const lineX = 9 + level * 10;
+            const dot = document.createElement('div');
+            dot.className = 'hierarchy-dot';
+            dot.style.left = `${lineX - 2}px`;
+            dot.style.top = `${taskPos.center - 2}px`;
+            container.appendChild(dot);
           }
           
           const hasChildrenTasks = hasChildren(task, todos);
           if (hasChildrenTasks) {
-            const lineX = 9 + level * 20;
+            const lineX = 9 + level * 10;
             const lineKey = `v-${task.id}`;
             if (drawnVerticalLines.has(lineKey)) return;
             drawnVerticalLines.add(lineKey);
@@ -405,7 +428,7 @@
               const parentPos = getTaskPosition(parent.id);
               if (parentPos && lastDescendantPos) {
                 drawnVerticalLines.add(lineKey);
-                const lineX = 9 + parentLevel * 20;
+                const lineX = 9 + parentLevel * 10;
                 
                 const isLastDescendantLastChild = isLastChild(lastDescendant, todos);
                 let lineBottom = lastDescendantPos.bottom;
@@ -436,7 +459,7 @@
             const lastDescendantPos = getTaskPosition(lastDescendant.id);
             if (lastDescendantPos) {
               drawnVerticalLines.add(lineKey);
-              const lineX = 9 + parentLevel * 20;
+              const lineX = 9 + parentLevel * 10;
               
               const isLastDescendantLastChild = isLastChild(lastDescendant, todos);
               let lineBottom = lastDescendantPos.bottom;
