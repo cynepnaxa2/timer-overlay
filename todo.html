@@ -83,21 +83,27 @@
         padding: 8px 12px;
         background: rgba(0, 0, 0, 0.3);
         border-top: 1px solid rgba(255, 255, 255, 0.1);
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
       }
       .task.active .task-actions {
         display: flex;
         gap: 8px;
       }
       .task-actions button {
-        padding: 6px 12px;
+        padding: 4px 8px;
         background: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 4px;
         color: #fff;
         cursor: pointer;
-        font-size: 12px;
-        white-space: nowrap;
+        font-size: 16px;
+        line-height: 1;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
       }
       .task-actions button:hover {
         background: rgba(255, 255, 255, 0.2);
@@ -235,7 +241,8 @@
         actionsEl.className = 'task-actions';
         
         const addSubtaskBtn = document.createElement('button');
-        addSubtaskBtn.textContent = 'Добавить подзадачу';
+        addSubtaskBtn.textContent = '+';
+        addSubtaskBtn.title = 'Добавить подзадачу';
         addSubtaskBtn.dataset.action = 'add-subtask';
         addSubtaskBtn.onclick = (e) => {
           e.stopPropagation();
@@ -250,7 +257,8 @@
         };
         
         const executeBtn = document.createElement('button');
-        executeBtn.textContent = 'Выполнить';
+        executeBtn.textContent = '▶';
+        executeBtn.title = 'Выполнить';
         executeBtn.dataset.action = 'execute';
         executeBtn.onclick = (e) => {
           e.stopPropagation();
@@ -261,7 +269,8 @@
         };
         
         const completeBtn = document.createElement('button');
-        completeBtn.textContent = 'Выполнено';
+        completeBtn.textContent = '✓';
+        completeBtn.title = 'Выполнено';
         completeBtn.dataset.action = 'complete';
         completeBtn.onclick = (e) => {
           e.stopPropagation();
