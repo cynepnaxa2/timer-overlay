@@ -47,10 +47,9 @@
         width: 16px;
         height: 16px;
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: center;
         cursor: pointer;
-        padding-top: 12px;
         color: inherit;
         user-select: none;
       }
@@ -87,7 +86,7 @@
       }
       .hierarchy-svg-line {
         stroke: rgba(255, 255, 255, 0.7) !important;
-        stroke-width: 2 !important;
+        stroke-width: 1 !important;
         fill: none;
       }
       .hierarchy-svg-dot {
@@ -423,7 +422,7 @@
         expanderEl.dataset.taskId = task.id;
         const level = calculateLevel(task, todos);
         expanderEl.dataset.level = level;
-        expanderEl.style.marginLeft = `${level * 9}px`;
+        expanderEl.style.marginLeft = `${8 + level * 9}px`;
         
         const iconEl = document.createElement('div');
         iconEl.className = 'task-expander-icon';
@@ -431,10 +430,13 @@
         const hasChildrenTasks = hasChildren(task, todos);
         if (!hasChildrenTasks) {
           iconEl.textContent = '•';
+          iconEl.style.fontSize = '10px';
         } else if (task.collapsed) {
           iconEl.textContent = '▶';
+          iconEl.style.fontSize = '12px';
         } else {
           iconEl.textContent = '▼';
+          iconEl.style.fontSize = '12px';
         }
         
         expanderEl.appendChild(iconEl);
@@ -579,8 +581,12 @@
           const parentExpanderRect = getExpanderRect(parentTask.id);
           if (!parentExpanderRect) return;
           
-          const lineX = parentExpanderRect.centerX;
-          const lineTop = parentExpanderRect.bottom;
+          const parentTaskRect = getTaskRect(parentTask.id);
+          if (!parentTaskRect) return;
+          
+          const lineX = parentExpanderRect.left;
+          const lineHeight = 20;
+          const lineTop = parentExpanderRect.bottom + lineHeight;
           
           const lastVisibleDescendant = getLastVisibleDescendant(parentTask, todos);
           const lastDescendantRect = getTaskRect(lastVisibleDescendant.id);
@@ -596,7 +602,7 @@
             verticalLine.setAttribute('y2', lineBottom.toString());
             verticalLine.setAttribute('class', 'hierarchy-svg-line');
             verticalLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
-            verticalLine.setAttribute('stroke-width', '2');
+            verticalLine.setAttribute('stroke-width', '1');
             svg.appendChild(verticalLine);
             verticalLinesCount++;
             console.log(`[drawHierarchyLines] Added vertical line for task ${parentTask.id}: x=${lineX}, top=${lineTop}, bottom=${lineBottom}`);
@@ -708,16 +714,19 @@
           } else {
             const taskLevel = calculateLevel(task, todos);
             expanderEl.dataset.level = taskLevel;
-            expanderEl.style.marginLeft = `${taskLevel * 9}px`;
+            expanderEl.style.marginLeft = `${8 + taskLevel * 9}px`;
             const iconEl = expanderEl.querySelector('.task-expander-icon');
             if (iconEl) {
               const hasChildrenTasks = hasChildren(task, todos);
               if (!hasChildrenTasks) {
                 iconEl.textContent = '•';
+                iconEl.style.fontSize = '10px';
               } else if (task.collapsed) {
                 iconEl.textContent = '▶';
+                iconEl.style.fontSize = '12px';
               } else {
                 iconEl.textContent = '▼';
+                iconEl.style.fontSize = '12px';
               }
             }
           }
