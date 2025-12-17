@@ -259,14 +259,38 @@
         renderTasks(todos, true);
       }
       
+      function focusTask(taskId) {
+        setTimeout(() => {
+          const taskEl = document.querySelector(`[data-task-id="${taskId}"]`);
+          if (taskEl) {
+            const contentEl = taskEl.querySelector('.task-content');
+            if (contentEl) {
+              contentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              contentEl.focus();
+              const range = document.createRange();
+              range.selectNodeContents(contentEl);
+              range.collapse(false);
+              const selection = window.getSelection();
+              selection.removeAllRanges();
+              selection.addRange(range);
+              document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
+              taskEl.classList.add('active');
+              activeTaskId = taskId;
+              focusedElement = contentEl;
+            }
+          }
+        }, 100);
+      }
+      
       function createTaskActions(taskId) {
         const actionsEl = document.createElement('div');
         actionsEl.className = 'task-actions';
         
         const buttons = [
           { text: '+', title: 'Добавить подзадачу', action: async () => {
-            await window.todoApi.createTodo('', taskId);
+            const newTask = await window.todoApi.createTodo('', taskId);
             await refreshTodos();
+            if (newTask) focusTask(newTask.id);
           }},
           { text: '▶', title: 'Выполнить', action: () => {
             const task = currentTodos.find(t => t.id === taskId);
@@ -588,7 +612,11 @@
         if (matchesHotkey(e, todoHotkeys.addSubtask)) {
           e.preventDefault();
           if (window.todoApi) {
-            window.todoApi.createTodo('', activeTaskId).then(() => refreshTodos());
+            window.todoApi.createTodo('', activeTaskId).then(newTask => {
+              refreshTodos().then(() => {
+                if (newTask) focusTask(newTask.id);
+              });
+            });
           }
         } else if (matchesHotkey(e, todoHotkeys.execute)) {
           e.preventDefault();
