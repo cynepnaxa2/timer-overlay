@@ -28,7 +28,8 @@
         width: 100%;
         height: 100%;
         pointer-events: none;
-        z-index: 0;
+        z-index: 1;
+        overflow: visible;
       }
       .task {
         width: 100%;
@@ -36,12 +37,10 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         position: relative;
+        align-items: flex-start;
       }
       .task-hierarchy {
-        position: relative;
-        flex-shrink: 0;
-        width: 10px;
-        min-width: 10px;
+        display: none;
       }
       .task-expander {
         flex-shrink: 0;
@@ -51,7 +50,7 @@
         align-items: flex-start;
         justify-content: center;
         cursor: pointer;
-        padding-top: 2px;
+        padding-top: 12px;
         color: inherit;
         user-select: none;
       }
@@ -87,8 +86,8 @@
         z-index: 1;
       }
       .hierarchy-svg-line {
-        stroke: rgba(255, 255, 255, 0.7);
-        stroke-width: 1;
+        stroke: rgba(255, 255, 255, 0.7) !important;
+        stroke-width: 2 !important;
         fill: none;
       }
       .hierarchy-svg-dot {
@@ -96,7 +95,7 @@
       }
       .task-content {
         position: relative;
-        z-index: 1;
+        z-index: 0;
       }
       .task-group-separator {
         height: 20px;
@@ -422,6 +421,9 @@
         const expanderEl = document.createElement('div');
         expanderEl.className = 'task-expander';
         expanderEl.dataset.taskId = task.id;
+        const level = calculateLevel(task, todos);
+        expanderEl.dataset.level = level;
+        expanderEl.style.marginLeft = `${level * 9}px`;
         
         const iconEl = document.createElement('div');
         iconEl.className = 'task-expander-icon';
@@ -469,17 +471,6 @@
         return siblings.length === 0 || siblings[siblings.length - 1].id === task.id;
       }
       
-      function createTaskHierarchy(task, todos) {
-        const currentLevel = calculateLevel(task, todos);
-        
-        const hierarchyEl = document.createElement('div');
-        hierarchyEl.className = 'task-hierarchy';
-        hierarchyEl.style.width = `${10 + currentLevel * 10}px`;
-        hierarchyEl.style.minWidth = `${10 + currentLevel * 10}px`;
-        
-        return hierarchyEl;
-      }
-      
       function getLastDescendant(task, todos) {
         const children = todos.filter(t => t.parentId === task.id && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
         if (children.length === 0) return task;
@@ -491,18 +482,6 @@
         const children = todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos)).sort((a, b) => (a.order || 0) - (b.order || 0));
         if (children.length === 0) return task;
         return getLastVisibleDescendant(children[children.length - 1], todos);
-      }
-      
-      function getExpanderPosition(taskId, container) {
-        const expanderEl = container.querySelector(`.task-expander[data-task-id="${taskId}"]`);
-        if (!expanderEl) return null;
-        const rect = expanderEl.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        return {
-          top: rect.top - containerRect.top + container.scrollTop,
-          bottom: rect.bottom - containerRect.top + container.scrollTop,
-          height: rect.height
-        };
       }
       
       function drawHierarchyLines(todos, container) {
@@ -518,11 +497,17 @@
         
         const taskElements = Array.from(container.querySelectorAll('.task'));
         const taskElementMap = new Map();
-        const tasksInOrder = [];
         taskElements.forEach(el => {
           const taskId = el.dataset.taskId;
           if (taskId) {
             taskElementMap.set(taskId, el);
+          }
+        });
+        
+        const tasksInOrder = [];
+        taskElements.forEach(el => {
+          const taskId = el.dataset.taskId;
+          if (taskId) {
             tasksInOrder.push({ id: taskId, element: el });
           }
         });
@@ -544,9 +529,12 @@
           if (!expanderEl) return null;
           const rect = expanderEl.getBoundingClientRect();
           return {
+            left: rect.left - containerRect.left,
             top: rect.top - containerRect.top + scrollTop,
             bottom: rect.bottom - containerRect.top + scrollTop,
-            height: rect.height
+            height: rect.height,
+            width: rect.width,
+            centerX: rect.left - containerRect.left + rect.width / 2
           };
         };
         
@@ -556,45 +544,31 @@
           const taskRect = getTaskRect(task.id);
           if (!taskRect) return;
           
-          const level = calculateLevel(task, todos);
-          const lineX = 9 + level * 10;
+          const expanderRect = getExpanderRect(task.id);
+          if (!expanderRect) return;
           
           if (task.parentId) {
             const parent = todos.find(t => t.id === task.parentId);
             if (parent) {
-              const parentLevel = calculateLevel(parent, todos);
-              const parentLineX = 9 + parentLevel * 10;
-              
-              const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-              horizontalLine.setAttribute('x1', parentLineX);
-              horizontalLine.setAttribute('y1', taskRect.center);
-              horizontalLine.setAttribute('x2', parentLineX + 10);
-              horizontalLine.setAttribute('y2', taskRect.center);
-              horizontalLine.setAttribute('class', 'hierarchy-svg-line');
-              svg.appendChild(horizontalLine);
-              
-              const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-              dot.setAttribute('cx', parentLineX + 10);
-              dot.setAttribute('cy', taskRect.center);
-              dot.setAttribute('r', 2);
-              dot.setAttribute('class', 'hierarchy-svg-dot');
-              svg.appendChild(dot);
+              const parentExpanderRect = getExpanderRect(parent.id);
+              if (parentExpanderRect) {
+                const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                horizontalLine.setAttribute('x1', (parentExpanderRect.left + parentExpanderRect.width).toString());
+                horizontalLine.setAttribute('y1', taskRect.center.toString());
+                horizontalLine.setAttribute('x2', expanderRect.left.toString());
+                horizontalLine.setAttribute('y2', taskRect.center.toString());
+                horizontalLine.setAttribute('class', 'hierarchy-svg-line');
+                horizontalLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+                horizontalLine.setAttribute('stroke-width', '2');
+                svg.appendChild(horizontalLine);
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('cx', expanderRect.left.toString());
+                dot.setAttribute('cy', taskRect.center.toString());
+                dot.setAttribute('r', 2);
+                dot.setAttribute('class', 'hierarchy-svg-dot');
+                svg.appendChild(dot);
+              }
             }
-          } else {
-            const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            horizontalLine.setAttribute('x1', lineX);
-            horizontalLine.setAttribute('y1', taskRect.center);
-            horizontalLine.setAttribute('x2', lineX + 10);
-            horizontalLine.setAttribute('y2', taskRect.center);
-            horizontalLine.setAttribute('class', 'hierarchy-svg-line');
-            svg.appendChild(horizontalLine);
-            
-            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            dot.setAttribute('cx', lineX);
-            dot.setAttribute('cy', taskRect.center);
-            dot.setAttribute('r', 2);
-            dot.setAttribute('class', 'hierarchy-svg-dot');
-            svg.appendChild(dot);
           }
         });
         
@@ -610,26 +584,35 @@
           const parentRect = getTaskRect(parentTask.id);
           if (!parentRect) return;
           
+          const parentExpanderRect = getExpanderRect(parentTask.id);
+          if (!parentExpanderRect) return;
+          
           const parentIndex = tasksInOrder.findIndex(t => t.id === parentTask.id);
           if (parentIndex === -1) return;
           
-          const lineX = 9 + parentLevel * 10;
+          const lineX = parentExpanderRect.centerX;
           let lineTop, lineBottom;
           
           if (!parentTask.collapsed) {
-            const expanderRect = getExpanderRect(parentTask.id);
-            if (expanderRect) {
-              lineTop = expanderRect.bottom;
-            } else {
-              lineTop = parentRect.top;
-            }
+            lineTop = parentExpanderRect.bottom;
             
-            const lastVisibleDescendant = getLastVisibleDescendant(parentTask, todos);
-            const lastDescendantRect = getTaskRect(lastVisibleDescendant.id);
-            if (lastDescendantRect) {
-              lineBottom = lastDescendantRect.center;
+            const children = todos.filter(t => t.parentId === parentTask.id && !t.completed && isTaskVisible(t, todos));
+            if (children.length > 0) {
+              const lastVisibleDescendant = getLastVisibleDescendant(parentTask, todos);
+              const lastDescendantRect = getTaskRect(lastVisibleDescendant.id);
+              if (lastDescendantRect) {
+                lineBottom = lastDescendantRect.bottom;
+              } else {
+                const lastChild = children[children.length - 1];
+                const lastChildRect = getTaskRect(lastChild.id);
+                if (lastChildRect) {
+                  lineBottom = lastChildRect.bottom;
+                } else {
+                  return;
+                }
+              }
             } else {
-              lineBottom = parentRect.center;
+              return;
             }
           } else {
             for (let i = parentIndex + 1; i < tasksInOrder.length; i++) {
@@ -652,20 +635,30 @@
             if (lineTop === undefined) return;
           }
           
-          if (lineTop !== undefined && lineBottom !== undefined && lineBottom > lineTop) {
+          if (lineTop !== undefined && lineBottom !== undefined && lineBottom > lineTop && lineX > 0) {
             const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            verticalLine.setAttribute('x1', lineX);
-            verticalLine.setAttribute('y1', lineTop);
-            verticalLine.setAttribute('x2', lineX);
-            verticalLine.setAttribute('y2', lineBottom);
+            verticalLine.setAttribute('x1', lineX.toString());
+            verticalLine.setAttribute('y1', lineTop.toString());
+            verticalLine.setAttribute('x2', lineX.toString());
+            verticalLine.setAttribute('y2', lineBottom.toString());
             verticalLine.setAttribute('class', 'hierarchy-svg-line');
+            verticalLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+            verticalLine.setAttribute('stroke-width', '2');
             svg.appendChild(verticalLine);
           }
         });
         
         const containerHeight = Math.max(container.scrollHeight, containerRect.height);
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', `${containerHeight}px`);
+        svg.setAttribute('width', containerRect.width.toString());
+        svg.setAttribute('height', containerHeight.toString());
+        svg.setAttribute('viewBox', `0 0 ${containerRect.width} ${containerHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.style.width = '100%';
+        svg.style.height = `${containerHeight}px`;
+        svg.style.position = 'absolute';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        
       }
       
       function renderTask(task, todos, container) {
@@ -682,7 +675,6 @@
           }
           
           const expanderEl = createTaskExpander(task, todos);
-          const hierarchyEl = createTaskHierarchy(task, todos);
           
           const contentEl = document.createElement('div');
           contentEl.className = 'task-content';
@@ -701,7 +693,6 @@
           const actionsEl = createTaskActions(task.id);
           
           taskEl.appendChild(expanderEl);
-          taskEl.appendChild(hierarchyEl);
           taskEl.appendChild(contentEl);
           taskEl.appendChild(actionsEl);
           container.appendChild(taskEl);
@@ -734,16 +725,14 @@
           let expanderEl = taskEl.querySelector('.task-expander');
           if (!expanderEl) {
             expanderEl = createTaskExpander(task, todos);
-            const hierarchyEl = taskEl.querySelector('.task-hierarchy');
-            if (hierarchyEl) {
-              taskEl.insertBefore(expanderEl, hierarchyEl);
-            } else {
-              const contentEl = taskEl.querySelector('.task-content');
-              if (contentEl) {
-                taskEl.insertBefore(expanderEl, contentEl);
-              }
+            const contentEl = taskEl.querySelector('.task-content');
+            if (contentEl) {
+              taskEl.insertBefore(expanderEl, contentEl);
             }
           } else {
+            const taskLevel = calculateLevel(task, todos);
+            expanderEl.dataset.level = taskLevel;
+            expanderEl.style.marginLeft = `${taskLevel * 9}px`;
             const iconEl = expanderEl.querySelector('.task-expander-icon');
             if (iconEl) {
               const hasChildrenTasks = hasChildren(task, todos);
@@ -754,14 +743,6 @@
               } else {
                 iconEl.textContent = '▼';
               }
-            }
-          }
-          let hierarchyEl = taskEl.querySelector('.task-hierarchy');
-          if (!hierarchyEl) {
-            hierarchyEl = createTaskHierarchy(task, todos);
-            const contentEl = taskEl.querySelector('.task-content');
-            if (contentEl) {
-              taskEl.insertBefore(hierarchyEl, contentEl);
             }
           }
           let actionsEl = taskEl.querySelector('.task-actions');
