@@ -122,26 +122,19 @@
       function calculateLevel(task, todos) {
         if (!task.parentId) return 0;
         const parent = todos.find(t => t.id === task.parentId);
-        if (!parent) return 0;
-        return calculateLevel(parent, todos) + 1;
+        return parent ? calculateLevel(parent, todos) + 1 : 0;
       }
       
       function isTaskVisible(task, todos) {
         if (!task.parentId) return true;
         const parent = todos.find(t => t.id === task.parentId);
-        if (!parent) return true;
-        if (parent.collapsed) return false;
-        return isTaskVisible(parent, todos);
+        return !parent || (!parent.collapsed && isTaskVisible(parent, todos));
       }
       
       function autoResize(element) {
         if (!element) return;
-        const currentHeight = element.style.height;
         element.style.height = 'auto';
-        const scrollHeight = element.scrollHeight;
-        const minHeight = 40;
-        const newHeight = Math.max(minHeight, scrollHeight);
-        element.style.height = newHeight + 'px';
+        element.style.height = Math.max(40, element.scrollHeight) + 'px';
       }
       
       let updateTimeout = null;
@@ -196,25 +189,15 @@
           'Esc': 'Escape'
         };
         
-        let keyMatches = false;
-        if (keyMap[parsed.key]) {
-          keyMatches = keyMap[parsed.key] === eventKey;
-        } else if (parsed.key && parsed.key.length === 1) {
-          keyMatches = parsed.key.toLowerCase() === eventKey.toLowerCase() || 
-                       parsed.key === eventKey ||
-                       parsed.key === eventCode;
-        } else {
-          keyMatches = parsed.key === eventKey || parsed.key === eventCode;
-        }
+        const keyMatches = keyMap[parsed.key] ? keyMap[parsed.key] === eventKey :
+          parsed.key?.length === 1 ? parsed.key.toLowerCase() === eventKey.toLowerCase() || parsed.key === eventKey || parsed.key === eventCode :
+          parsed.key === eventKey || parsed.key === eventCode;
         
-        if (!keyMatches) return false;
-        
-        if (parsed.modifiers.ctrl !== event.ctrlKey) return false;
-        if (parsed.modifiers.alt !== event.altKey) return false;
-        if (parsed.modifiers.shift !== event.shiftKey) return false;
-        if (parsed.modifiers.meta !== event.metaKey) return false;
-        
-        return true;
+        return keyMatches &&
+          parsed.modifiers.ctrl === event.ctrlKey &&
+          parsed.modifiers.alt === event.altKey &&
+          parsed.modifiers.shift === event.shiftKey &&
+          parsed.modifiers.meta === event.metaKey;
       }
       
       function setupRichEditor(element, taskId) {
@@ -228,20 +211,20 @@
           }
         });
         
+        const debouncedUpdate = () => {
+          clearTimeout(updateTimeout);
+          updateTimeout = setTimeout(() => {
+            window.todoApi.updateTodo(taskId, { content: element.innerHTML });
+            const container = document.getElementById('todo-container');
+            if (container && currentTodos) {
+              setTimeout(() => drawHierarchyLines(currentTodos, container), 50);
+            }
+          }, 300);
+        };
+        
         element.addEventListener('input', () => {
           autoResize(element);
-          if (window.todoApi) {
-            clearTimeout(updateTimeout);
-            updateTimeout = setTimeout(() => {
-              window.todoApi.updateTodo(taskId, { content: element.innerHTML });
-              if (currentTodos) {
-                const container = document.getElementById('todo-container');
-                if (container) {
-                  setTimeout(() => drawHierarchyLines(currentTodos, container), 50);
-                }
-              }
-            }, 300);
-          }
+          if (window.todoApi) debouncedUpdate();
         });
         
         element.addEventListener('paste', (e) => {
@@ -270,97 +253,76 @@
         }, 0);
       }
       
+      async function refreshTodos() {
+        const todos = await window.todoApi.getTodos();
+        currentTodos = todos;
+        renderTasks(todos, true);
+      }
+      
       function createTaskActions(taskId) {
         const actionsEl = document.createElement('div');
         actionsEl.className = 'task-actions';
         
-        const addSubtaskBtn = document.createElement('button');
-        addSubtaskBtn.textContent = '+';
-        addSubtaskBtn.title = 'Добавить подзадачу';
-        addSubtaskBtn.dataset.action = 'add-subtask';
-        addSubtaskBtn.onclick = (e) => {
-          e.stopPropagation();
-          if (window.todoApi) {
-            window.todoApi.createTodo('', taskId).then(() => {
-              return window.todoApi.getTodos();
-            }).then(todos => {
-              currentTodos = todos;
-              renderTasks(todos, true);
-            });
-          }
-        };
+        const buttons = [
+          { text: '+', title: 'Добавить подзадачу', action: async () => {
+            await window.todoApi.createTodo('', taskId);
+            await refreshTodos();
+          }},
+          { text: '▶', title: 'Выполнить', action: () => {
+            const task = currentTodos.find(t => t.id === taskId);
+            if (task) window.todoApi.startTimer(task.motivationWord || null);
+          }},
+          { text: '✓', title: 'Выполнено', action: async () => {
+            await window.todoApi.updateTodo(taskId, { completed: true, completedAt: Date.now() });
+            await refreshTodos();
+          }}
+        ];
         
-        const executeBtn = document.createElement('button');
-        executeBtn.textContent = '▶';
-        executeBtn.title = 'Выполнить';
-        executeBtn.dataset.action = 'execute';
-        executeBtn.onclick = (e) => {
-          e.stopPropagation();
-          const task = currentTodos.find(t => t.id === taskId);
-          if (window.todoApi && task) {
-            window.todoApi.startTimer(task.motivationWord || null);
-          }
-        };
-        
-        const completeBtn = document.createElement('button');
-        completeBtn.textContent = '✓';
-        completeBtn.title = 'Выполнено';
-        completeBtn.dataset.action = 'complete';
-        completeBtn.onclick = (e) => {
-          e.stopPropagation();
-          if (window.todoApi) {
-            window.todoApi.updateTodo(taskId, { 
-              completed: true, 
-              completedAt: Date.now() 
-            }).then(() => {
-              return window.todoApi.getTodos();
-            }).then(todos => {
-              currentTodos = todos;
-              renderTasks(todos, true);
-            });
-          }
-        };
-        
-        actionsEl.appendChild(addSubtaskBtn);
-        actionsEl.appendChild(executeBtn);
-        actionsEl.appendChild(completeBtn);
+        buttons.forEach(({ text, title, action }) => {
+          const btn = document.createElement('button');
+          btn.textContent = text;
+          btn.title = title;
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            if (window.todoApi) action();
+          };
+          actionsEl.appendChild(btn);
+        });
         
         return actionsEl;
+      }
+      
+      function updateExpanderIcon(iconEl, task, todos) {
+        const hasChildrenTasks = hasChildren(task, todos);
+        if (!hasChildrenTasks) {
+          iconEl.textContent = '●';
+          iconEl.style.fontSize = '10px';
+        } else if (task.collapsed) {
+          iconEl.textContent = '▶';
+          iconEl.style.fontSize = '12px';
+        } else {
+          iconEl.textContent = '▼';
+          iconEl.style.fontSize = '12px';
+        }
+        iconEl.style.lineHeight = '1';
       }
       
       function createTaskExpander(task, todos) {
         const expanderEl = document.createElement('div');
         expanderEl.className = 'task-expander';
         expanderEl.dataset.taskId = task.id;
-        const level = calculateLevel(task, todos);
-        expanderEl.style.marginLeft = `${8 + level * 9}px`;
+        expanderEl.style.marginLeft = `${8 + calculateLevel(task, todos) * 9}px`;
         
         const iconEl = document.createElement('div');
         iconEl.className = 'task-expander-icon';
-        
-        const hasChildrenTasks = hasChildren(task, todos);
-        if (!hasChildrenTasks) {
-          iconEl.textContent = '●';
-          iconEl.style.fontSize = '10px';
-          iconEl.style.lineHeight = '1';
-        } else if (task.collapsed) {
-          iconEl.textContent = '▶';
-          iconEl.style.fontSize = '12px';
-          iconEl.style.lineHeight = '1';
-        } else {
-          iconEl.textContent = '▼';
-          iconEl.style.fontSize = '12px';
-          iconEl.style.lineHeight = '1';
-        }
-        
+        updateExpanderIcon(iconEl, task, todos);
         expanderEl.appendChild(iconEl);
         
-        if (hasChildrenTasks) {
+        if (hasChildren(task, todos)) {
           expanderEl.addEventListener('click', async (e) => {
             e.stopPropagation();
             await window.todoApi.toggleTaskCollapse(task.id);
-            const updatedTodos = await window.todoApi.getTodos();
-            renderTasks(updatedTodos);
+            renderTasks(await window.todoApi.getTodos());
           });
         }
         
@@ -373,9 +335,9 @@
       
       function getLastVisibleDescendant(task, todos) {
         if (task.collapsed) return task;
-        const children = todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos)).sort((a, b) => (a.order || 0) - (b.order || 0));
-        if (children.length === 0) return task;
-        return getLastVisibleDescendant(children[children.length - 1], todos);
+        const children = todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        return children.length === 0 ? task : getLastVisibleDescendant(children[children.length - 1], todos);
       }
       
       function drawHierarchyLines(todos, container) {
@@ -386,55 +348,42 @@
           svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
           svg.id = 'hierarchy-svg';
           svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-          if (container.firstChild) {
-            container.insertBefore(svg, container.firstChild);
-          } else {
-            container.appendChild(svg);
-          }
+          container.insertBefore(svg, container.firstChild);
         }
         
-        while (svg.firstChild) {
-          svg.removeChild(svg.firstChild);
-        }
+        svg.replaceChildren();
         
         const containerRect = container.getBoundingClientRect();
         const svgRect = svg.getBoundingClientRect();
         const scrollTop = container.scrollTop;
         
-        const taskElements = Array.from(container.querySelectorAll('.task'));
         const taskElementMap = new Map();
-        taskElements.forEach(el => {
-          const taskId = el.dataset.taskId;
-          if (taskId) {
-            taskElementMap.set(taskId, el);
-          }
+        container.querySelectorAll('.task').forEach(el => {
+          if (el.dataset.taskId) taskElementMap.set(el.dataset.taskId, el);
         });
         
-        const getTaskRect = (taskId) => {
-          const el = taskElementMap.get(taskId);
+        const getRect = (el) => {
           if (!el) return null;
           const rect = el.getBoundingClientRect();
-          const svgRect = svg.getBoundingClientRect();
-          return {
-            top: rect.top - svgRect.top + scrollTop,
-            height: rect.height,
-            center: rect.top - svgRect.top + scrollTop + rect.height / 2,
-            bottom: rect.top - svgRect.top + scrollTop + rect.height
-          };
-        };
-        
-        const getExpanderRect = (taskId) => {
-          const expanderEl = container.querySelector(`.task-expander[data-task-id="${taskId}"]`);
-          if (!expanderEl) return null;
-          const rect = expanderEl.getBoundingClientRect();
-          const svgRect = svg.getBoundingClientRect();
+          const offsetTop = rect.top - svgRect.top + scrollTop;
           return {
             left: rect.left - svgRect.left,
-            top: rect.top - svgRect.top + scrollTop,
+            top: offsetTop,
             bottom: rect.bottom - svgRect.top + scrollTop,
             height: rect.height,
             width: rect.width
           };
+        };
+        
+        const getTaskRect = (taskId) => {
+          const el = taskElementMap.get(taskId);
+          if (!el) return null;
+          const base = getRect(el);
+          return { ...base, center: base.top + base.height / 2 };
+        };
+        
+        const getExpanderRect = (taskId) => {
+          return getRect(container.querySelector(`.task-expander[data-task-id="${taskId}"]`));
         };
         
         const visibleTasks = todos.filter(t => !t.completed && isTaskVisible(t, todos));
@@ -455,32 +404,33 @@
           const lineBottom = lastDescendantRect.bottom;
           
           if (lineBottom > lineTop && lineX > 0) {
-            const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            verticalLine.setAttribute('x1', lineX.toString());
-            verticalLine.setAttribute('y1', lineTop.toString());
-            verticalLine.setAttribute('x2', lineX.toString());
-            verticalLine.setAttribute('y2', lineBottom.toString());
-            verticalLine.setAttribute('class', 'hierarchy-svg-line');
-            verticalLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
-            verticalLine.setAttribute('stroke-width', '1');
-            svg.appendChild(verticalLine);
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', lineX);
+            line.setAttribute('y1', lineTop);
+            line.setAttribute('x2', lineX);
+            line.setAttribute('y2', lineBottom);
+            line.setAttribute('class', 'hierarchy-svg-line');
+            line.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
           }
         });
         
-        const containerHeight = Math.max(container.scrollHeight, containerRect.height);
-        const svgWidth = containerRect.width;
-        const svgHeight = containerHeight;
-        
-        svg.setAttribute('width', svgWidth.toString());
-        svg.setAttribute('height', svgHeight.toString());
-        svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+        const svgHeight = Math.max(container.scrollHeight, containerRect.height);
+        Object.assign(svg, {
+          width: { baseVal: { value: containerRect.width } },
+          height: { baseVal: { value: svgHeight } }
+        });
+        svg.setAttribute('viewBox', `0 0 ${containerRect.width} ${svgHeight}`);
         svg.setAttribute('preserveAspectRatio', 'none');
-        svg.style.width = '100%';
-        svg.style.height = `${svgHeight}px`;
-        svg.style.position = 'absolute';
-        svg.style.top = '0';
-        svg.style.left = '0';
-        svg.style.overflow = 'visible';
+        Object.assign(svg.style, {
+          width: '100%',
+          height: `${svgHeight}px`,
+          position: 'absolute',
+          top: '0',
+          left: '0',
+          overflow: 'visible'
+        });
       }
       
       function renderTask(task, todos, container) {
@@ -499,12 +449,15 @@
           contentEl.spellcheck = false;
           contentEl.innerHTML = task.content || '';
           
-          contentEl.setAttribute('data-click-handler', 'true');
-          contentEl.addEventListener('click', (e) => {
-            e.stopPropagation();
+          const activateTask = () => {
             document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
             taskEl.classList.add('active');
             activeTaskId = task.id;
+          };
+          contentEl.setAttribute('data-click-handler', 'true');
+          contentEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            activateTask();
           });
           
           const actionsEl = createTaskActions(task.id);
@@ -518,9 +471,7 @@
           requestAnimationFrame(() => {
             autoResize(contentEl);
             setTimeout(() => {
-              if (currentTodos) {
-                drawHierarchyLines(currentTodos, container);
-              }
+              if (currentTodos) drawHierarchyLines(currentTodos, container);
             }, 0);
           });
         } else {
@@ -542,53 +493,27 @@
               taskEl.insertBefore(expanderEl, contentEl);
             }
           } else {
-            const taskLevel = calculateLevel(task, todos);
-            expanderEl.style.marginLeft = `${8 + taskLevel * 9}px`;
+            expanderEl.style.marginLeft = `${8 + calculateLevel(task, todos) * 9}px`;
             const iconEl = expanderEl.querySelector('.task-expander-icon');
             if (iconEl) {
-              const hasChildrenTasks = hasChildren(task, todos);
-              if (!hasChildrenTasks) {
-                iconEl.textContent = '●';
-                iconEl.style.fontSize = '10px';
-                iconEl.style.lineHeight = '1';
-              } else if (task.collapsed) {
-                iconEl.textContent = '▶';
-                iconEl.style.fontSize = '12px';
-                iconEl.style.lineHeight = '1';
-              } else {
-                iconEl.textContent = '▼';
-                iconEl.style.fontSize = '12px';
-                iconEl.style.lineHeight = '1';
-              }
+              updateExpanderIcon(iconEl, task, todos);
             }
           }
           let actionsEl = taskEl.querySelector('.task-actions');
           if (!actionsEl) {
             actionsEl = createTaskActions(task.id);
             taskEl.appendChild(actionsEl);
-          } else {
-            const buttons = actionsEl.querySelectorAll('button[data-action="add-subtask"]');
-            buttons.forEach(btn => {
-              btn.onclick = (e) => {
-                e.stopPropagation();
-                if (window.todoApi) {
-                  window.todoApi.createTodo('', task.id).then(() => {
-                    return window.todoApi.getTodos();
-                  }).then(todos => {
-                    currentTodos = todos;
-                    renderTasks(todos, true);
-                  });
-                }
-              };
-            });
           }
           if (contentEl && !contentEl.hasAttribute('data-click-handler')) {
-            contentEl.setAttribute('data-click-handler', 'true');
-            contentEl.addEventListener('click', (e) => {
-              e.stopPropagation();
+            const activateTask = () => {
               document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
               taskEl.classList.add('active');
               activeTaskId = task.id;
+            };
+            contentEl.setAttribute('data-click-handler', 'true');
+            contentEl.addEventListener('click', (e) => {
+              e.stopPropagation();
+              activateTask();
             });
           }
           if (activeTaskId === task.id) {
@@ -597,9 +522,9 @@
         }
         
         if (!task.collapsed) {
-          const children = todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos));
-          children.sort((a, b) => (a.order || 0) - (b.order || 0));
-          children.forEach(child => renderTask(child, todos, container));
+          todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos))
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .forEach(child => renderTask(child, todos, container));
         }
       }
       
@@ -611,58 +536,37 @@
         if (!preserveExisting) {
           const svg = container.querySelector('#hierarchy-svg');
           container.innerHTML = '';
-          if (svg) {
-            container.appendChild(svg);
-          }
+          if (svg) container.appendChild(svg);
           activeTaskId = null;
         } else {
-          const existingIds = new Set(Array.from(container.querySelectorAll('[data-task-id]')).map(el => el.dataset.taskId));
           const currentIds = new Set(todos.filter(t => !t.completed).map(t => t.id));
-          existingIds.forEach(id => {
-            if (!currentIds.has(id)) {
-              const el = container.querySelector(`[data-task-id="${id}"]`);
-              if (el) el.remove();
-              if (activeTaskId === id) {
-                activeTaskId = null;
-              }
+          container.querySelectorAll('[data-task-id]').forEach(el => {
+            if (!currentIds.has(el.dataset.taskId)) {
+              el.remove();
+              if (activeTaskId === el.dataset.taskId) activeTaskId = null;
             }
           });
         }
         
-        const rootTasks = todos.filter(t => !t.parentId && !t.completed && isTaskVisible(t, todos));
-        rootTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
-        
-        rootTasks.forEach(task => renderTask(task, todos, container));
+        todos.filter(t => !t.parentId && !t.completed && isTaskVisible(t, todos))
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .forEach(task => renderTask(task, todos, container));
         
         requestAnimationFrame(() => {
-          const allContentElements = container.querySelectorAll('.task-content');
-          allContentElements.forEach(el => {
-            if (el !== focusedElement) {
-              autoResize(el);
-            }
+          container.querySelectorAll('.task-content').forEach(el => {
+            if (el !== focusedElement) autoResize(el);
           });
-          setTimeout(() => {
-            const svg = container.querySelector('#hierarchy-svg');
-            if (!svg) {
-              const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-              newSvg.id = 'hierarchy-svg';
-              newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-              container.insertBefore(newSvg, container.firstChild);
-            }
-            drawHierarchyLines(todos, container);
-          }, 50);
+          setTimeout(() => drawHierarchyLines(todos, container), 50);
         });
       }
       
-      let scrollTimeout = null;
       const container = document.getElementById('todo-container');
+      let scrollTimeout = null;
       if (container) {
         container.addEventListener('scroll', () => {
-          if (scrollTimeout) clearTimeout(scrollTimeout);
+          clearTimeout(scrollTimeout);
           scrollTimeout = setTimeout(() => {
-            if (currentTodos) {
-              drawHierarchyLines(currentTodos, container);
-            }
+            if (currentTodos) drawHierarchyLines(currentTodos, container);
           }, 50);
         });
       }
@@ -684,12 +588,7 @@
         if (matchesHotkey(e, todoHotkeys.addSubtask)) {
           e.preventDefault();
           if (window.todoApi) {
-            window.todoApi.createTodo('', activeTaskId).then(() => {
-              return window.todoApi.getTodos();
-            }).then(todos => {
-              currentTodos = todos;
-              renderTasks(todos, true);
-            });
+            window.todoApi.createTodo('', activeTaskId).then(() => refreshTodos());
           }
         } else if (matchesHotkey(e, todoHotkeys.execute)) {
           e.preventDefault();
@@ -700,15 +599,7 @@
         } else if (matchesHotkey(e, todoHotkeys.complete)) {
           e.preventDefault();
           if (window.todoApi) {
-            window.todoApi.updateTodo(activeTaskId, { 
-              completed: true, 
-              completedAt: Date.now() 
-            }).then(() => {
-              return window.todoApi.getTodos();
-            }).then(todos => {
-              currentTodos = todos;
-              renderTasks(todos, true);
-            });
+            window.todoApi.updateTodo(activeTaskId, { completed: true, completedAt: Date.now() }).then(() => refreshTodos());
           }
         }
       });
@@ -718,18 +609,16 @@
           todoHotkeys = hotkeys;
         });
         
-        window.todoApi.getTodos().then(todos => {
+        window.todoApi.getTodos().then(async todos => {
           if (todos.length === 0) {
-            window.todoApi.loadLargeDemo().then(() => {
-              return window.todoApi.getTodos();
-            }).then(todos => {
-              renderTasks(todos, false);
-            }).catch(() => {
-              renderTasks([], false);
-            });
-          } else {
-            renderTasks(todos, false);
+            try {
+              await window.todoApi.loadLargeDemo();
+              todos = await window.todoApi.getTodos();
+            } catch {
+              todos = [];
+            }
           }
+          renderTasks(todos, false);
         });
         
         window.todoApi.onTodosUpdated((todos) => {
@@ -737,13 +626,10 @@
         });
       }
       
-      window.loadLargeDemo = function() {
+      window.loadLargeDemo = async function() {
         if (window.todoApi) {
-          window.todoApi.loadLargeDemo().then(() => {
-            return window.todoApi.getTodos();
-          }).then(todos => {
-            renderTasks(todos, false);
-          });
+          await window.todoApi.loadLargeDemo();
+          renderTasks(await window.todoApi.getTodos(), false);
         }
       };
     </script>
