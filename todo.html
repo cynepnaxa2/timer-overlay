@@ -39,9 +39,6 @@
         position: relative;
         align-items: center;
       }
-      .task-hierarchy {
-        display: none;
-      }
       .task-expander {
         flex-shrink: 0;
         width: 16px;
@@ -64,42 +61,10 @@
         align-items: center;
         justify-content: center;
       }
-      .hierarchy-line {
-        position: absolute;
-        background: rgba(255, 255, 255, 0.7);
-        pointer-events: none;
-        z-index: 0;
-      }
-      .hierarchy-line-vertical {
-        width: 1px;
-      }
-      .hierarchy-line-horizontal {
-        height: 1px;
-      }
-      .hierarchy-dot {
-        position: absolute;
-        width: 4px;
-        height: 4px;
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 1;
-      }
       .hierarchy-svg-line {
         stroke: rgba(255, 255, 255, 0.7) !important;
         stroke-width: 1 !important;
         fill: none;
-      }
-      .hierarchy-svg-dot {
-        fill: rgba(255, 255, 255, 0.9);
-      }
-      .task-content {
-        position: relative;
-        z-index: 0;
-      }
-      .task-group-separator {
-        height: 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       }
       .task-content {
         width: 100%;
@@ -154,31 +119,11 @@
       <svg id="hierarchy-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <script>
-      const COLORS = ['#8B00FF', '#0000FF', '#00FFFF', '#00FF00', '#FFFF00', '#FF7F00', '#FF0000'];
-      
-      function getColorForLevel(level) {
-        if (level < 0) return COLORS[0];
-        if (level >= COLORS.length) return COLORS[COLORS.length - 1];
-        return COLORS[level];
-      }
-      
       function calculateLevel(task, todos) {
         if (!task.parentId) return 0;
         const parent = todos.find(t => t.id === task.parentId);
         if (!parent) return 0;
         return calculateLevel(parent, todos) + 1;
-      }
-      
-      function getAncestors(task, todos) {
-        const ancestors = [];
-        let current = task;
-        while (current.parentId) {
-          const parent = todos.find(t => t.id === current.parentId);
-          if (!parent) break;
-          ancestors.push(parent);
-          current = parent;
-        }
-        return ancestors.reverse();
       }
       
       function isTaskVisible(task, todos) {
@@ -187,37 +132,6 @@
         if (!parent) return true;
         if (parent.collapsed) return false;
         return isTaskVisible(parent, todos);
-      }
-      
-      function shouldContinueAncestorLine(ancestor, currentTask, todos) {
-        const ancestorChildren = todos.filter(t => t.parentId === ancestor.id && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
-        if (ancestorChildren.length === 0) return false;
-        
-        const lastChild = ancestorChildren[ancestorChildren.length - 1];
-        if (isTaskDescendant(lastChild, currentTask, todos)) {
-          return false;
-        }
-        
-        let foundCurrent = false;
-        for (const child of ancestorChildren) {
-          if (isTaskDescendant(child, currentTask, todos)) {
-            foundCurrent = true;
-            continue;
-          }
-          if (foundCurrent) {
-            return true;
-          }
-        }
-        return false;
-      }
-      
-      function isTaskDescendant(ancestor, task, todos) {
-        if (ancestor.id === task.id) return true;
-        const children = todos.filter(t => t.parentId === ancestor.id && !t.completed);
-        for (const child of children) {
-          if (isTaskDescendant(child, task, todos)) return true;
-        }
-        return false;
       }
       
       function autoResize(element) {
@@ -232,7 +146,6 @@
       
       let updateTimeout = null;
       let focusedElement = null;
-      let focusedTaskId = null;
       let activeTaskId = null;
       let currentTodos = [];
       let todoHotkeys = {
@@ -307,13 +220,11 @@
       function setupRichEditor(element, taskId) {
         element.addEventListener('focus', () => {
           focusedElement = element;
-          focusedTaskId = taskId;
         });
         
         element.addEventListener('blur', () => {
           if (focusedElement === element) {
             focusedElement = null;
-            focusedTaskId = null;
           }
         });
         
@@ -422,7 +333,6 @@
         expanderEl.className = 'task-expander';
         expanderEl.dataset.taskId = task.id;
         const level = calculateLevel(task, todos);
-        expanderEl.dataset.level = level;
         expanderEl.style.marginLeft = `${8 + level * 9}px`;
         
         const iconEl = document.createElement('div');
@@ -461,28 +371,6 @@
         return todos.some(t => t.parentId === task.id && !t.completed);
       }
       
-      function getSiblings(task, todos) {
-        if (!task.parentId) {
-          return todos.filter(t => !t.parentId && !t.completed && t.id !== task.id);
-        }
-        return todos.filter(t => t.parentId === task.parentId && !t.completed && t.id !== task.id);
-      }
-      
-      function isLastChild(task, todos) {
-        if (!task.parentId) {
-          const rootTasks = todos.filter(t => !t.parentId && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
-          return rootTasks.length === 0 || rootTasks[rootTasks.length - 1].id === task.id;
-        }
-        const siblings = todos.filter(t => t.parentId === task.parentId && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
-        return siblings.length === 0 || siblings[siblings.length - 1].id === task.id;
-      }
-      
-      function getLastDescendant(task, todos) {
-        const children = todos.filter(t => t.parentId === task.id && !t.completed).sort((a, b) => (a.order || 0) - (b.order || 0));
-        if (children.length === 0) return task;
-        return getLastDescendant(children[children.length - 1], todos);
-      }
-      
       function getLastVisibleDescendant(task, todos) {
         if (task.collapsed) return task;
         const children = todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos)).sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -491,14 +379,10 @@
       }
       
       function drawHierarchyLines(todos, container) {
-        if (!container) {
-          console.error('[drawHierarchyLines] Container not provided');
-          return;
-        }
+        if (!container) return;
         
         let svg = container.querySelector('#hierarchy-svg');
         if (!svg) {
-          console.warn('[drawHierarchyLines] SVG element not found, creating it');
           svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
           svg.id = 'hierarchy-svg';
           svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -509,8 +393,6 @@
           }
         }
         
-        console.log('[drawHierarchyLines] Starting, todos count:', todos.length);
-        
         while (svg.firstChild) {
           svg.removeChild(svg.firstChild);
         }
@@ -519,24 +401,12 @@
         const svgRect = svg.getBoundingClientRect();
         const scrollTop = container.scrollTop;
         
-        console.log('[drawHierarchyLines] Container rect:', containerRect);
-        console.log('[drawHierarchyLines] SVG rect:', svgRect);
-        console.log('[drawHierarchyLines] Scroll top:', scrollTop);
-        
         const taskElements = Array.from(container.querySelectorAll('.task'));
         const taskElementMap = new Map();
         taskElements.forEach(el => {
           const taskId = el.dataset.taskId;
           if (taskId) {
             taskElementMap.set(taskId, el);
-          }
-        });
-        
-        const tasksInOrder = [];
-        taskElements.forEach(el => {
-          const taskId = el.dataset.taskId;
-          if (taskId) {
-            tasksInOrder.push({ id: taskId, element: el });
           }
         });
         
@@ -555,38 +425,24 @@
         
         const getExpanderRect = (taskId) => {
           const expanderEl = container.querySelector(`.task-expander[data-task-id="${taskId}"]`);
-          if (!expanderEl) {
-            console.warn(`[getExpanderRect] Expander not found for task ${taskId}`);
-            return null;
-          }
+          if (!expanderEl) return null;
           const rect = expanderEl.getBoundingClientRect();
           const svgRect = svg.getBoundingClientRect();
-          const result = {
+          return {
             left: rect.left - svgRect.left,
             top: rect.top - svgRect.top + scrollTop,
             bottom: rect.bottom - svgRect.top + scrollTop,
             height: rect.height,
-            width: rect.width,
-            centerX: rect.left - svgRect.left + rect.width / 2
+            width: rect.width
           };
-          console.log(`[getExpanderRect] Task ${taskId}:`, result, 'rect:', rect, 'svgRect:', svgRect);
-          return result;
         };
         
         const visibleTasks = todos.filter(t => !t.completed && isTaskVisible(t, todos));
-        console.log('[drawHierarchyLines] Visible tasks:', visibleTasks.length);
-        
         const parentTasks = visibleTasks.filter(t => hasChildren(t, todos) && !t.collapsed);
-        console.log('[drawHierarchyLines] Expanded parent tasks:', parentTasks.length);
-        
-        let verticalLinesCount = 0;
         
         parentTasks.forEach(parentTask => {
           const parentExpanderRect = getExpanderRect(parentTask.id);
           if (!parentExpanderRect) return;
-          
-          const parentTaskRect = getTaskRect(parentTask.id);
-          if (!parentTaskRect) return;
           
           const lineX = parentExpanderRect.left;
           const lineHeight = 20;
@@ -608,12 +464,8 @@
             verticalLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
             verticalLine.setAttribute('stroke-width', '1');
             svg.appendChild(verticalLine);
-            verticalLinesCount++;
-            console.log(`[drawHierarchyLines] Added vertical line for task ${parentTask.id}: x=${lineX}, top=${lineTop}, bottom=${lineBottom}`);
           }
         });
-        
-        console.log(`[drawHierarchyLines] Added ${verticalLinesCount} vertical lines`);
         
         const containerHeight = Math.max(container.scrollHeight, containerRect.height);
         const svgWidth = containerRect.width;
@@ -629,36 +481,15 @@
         svg.style.top = '0';
         svg.style.left = '0';
         svg.style.overflow = 'visible';
-        
-        console.log(`[drawHierarchyLines] SVG configured: width=${svgWidth}, height=${svgHeight}, viewBox=0 0 ${svgWidth} ${svgHeight}`);
-        console.log(`[drawHierarchyLines] SVG children count: ${svg.children.length}`);
-        console.log(`[drawHierarchyLines] SVG computed style:`, {
-          display: window.getComputedStyle(svg).display,
-          visibility: window.getComputedStyle(svg).visibility,
-          opacity: window.getComputedStyle(svg).opacity,
-          zIndex: window.getComputedStyle(svg).zIndex,
-          position: window.getComputedStyle(svg).position
-        });
-        
-        if (svg.children.length > 0) {
-          const firstChild = svg.children[0];
-          console.log(`[drawHierarchyLines] First child:`, firstChild.tagName, firstChild.getAttribute('x1'), firstChild.getAttribute('y1'));
-        }
-        
       }
       
       function renderTask(task, todos, container) {
-        const level = calculateLevel(task, todos);
-        
         let taskEl = container.querySelector(`[data-task-id="${task.id}"]`);
         
         if (!taskEl) {
           taskEl = document.createElement('div');
           taskEl.className = 'task';
           taskEl.dataset.taskId = task.id;
-          if (task.parentId) {
-            taskEl.classList.add('has-parent');
-          }
           
           const expanderEl = createTaskExpander(task, todos);
           
@@ -693,11 +524,6 @@
             }, 0);
           });
         } else {
-          if (task.parentId) {
-            taskEl.classList.add('has-parent');
-          } else {
-            taskEl.classList.remove('has-parent');
-          }
           const contentEl = taskEl.querySelector('.task-content');
           if (contentEl && contentEl !== focusedElement) {
             if (contentEl.contentEditable === 'true') {
@@ -717,7 +543,6 @@
             }
           } else {
             const taskLevel = calculateLevel(task, todos);
-            expanderEl.dataset.level = taskLevel;
             expanderEl.style.marginLeft = `${8 + taskLevel * 9}px`;
             const iconEl = expanderEl.querySelector('.task-expander-icon');
             if (iconEl) {
