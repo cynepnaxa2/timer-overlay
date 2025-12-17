@@ -151,7 +151,7 @@
   </head>
   <body>
     <div id="todo-container">
-      <svg id="hierarchy-svg"></svg>
+      <svg id="hierarchy-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
     <script>
       const COLORS = ['#8B00FF', '#0000FF', '#00FFFF', '#00FF00', '#FFFF00', '#FF7F00', '#FF0000'];
@@ -485,15 +485,37 @@
       }
       
       function drawHierarchyLines(todos, container) {
-        const svg = container.querySelector('#hierarchy-svg');
-        if (!svg) return;
+        if (!container) {
+          console.error('[drawHierarchyLines] Container not provided');
+          return;
+        }
+        
+        let svg = container.querySelector('#hierarchy-svg');
+        if (!svg) {
+          console.warn('[drawHierarchyLines] SVG element not found, creating it');
+          svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.id = 'hierarchy-svg';
+          svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+          if (container.firstChild) {
+            container.insertBefore(svg, container.firstChild);
+          } else {
+            container.appendChild(svg);
+          }
+        }
+        
+        console.log('[drawHierarchyLines] Starting, todos count:', todos.length);
         
         while (svg.firstChild) {
           svg.removeChild(svg.firstChild);
         }
         
         const containerRect = container.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
         const scrollTop = container.scrollTop;
+        
+        console.log('[drawHierarchyLines] Container rect:', containerRect);
+        console.log('[drawHierarchyLines] SVG rect:', svgRect);
+        console.log('[drawHierarchyLines] Scroll top:', scrollTop);
         
         const taskElements = Array.from(container.querySelectorAll('.task'));
         const taskElementMap = new Map();
@@ -516,126 +538,57 @@
           const el = taskElementMap.get(taskId);
           if (!el) return null;
           const rect = el.getBoundingClientRect();
+          const svgRect = svg.getBoundingClientRect();
           return {
-            top: rect.top - containerRect.top + scrollTop,
+            top: rect.top - svgRect.top + scrollTop,
             height: rect.height,
-            center: rect.top - containerRect.top + scrollTop + rect.height / 2,
-            bottom: rect.top - containerRect.top + scrollTop + rect.height
+            center: rect.top - svgRect.top + scrollTop + rect.height / 2,
+            bottom: rect.top - svgRect.top + scrollTop + rect.height
           };
         };
         
         const getExpanderRect = (taskId) => {
           const expanderEl = container.querySelector(`.task-expander[data-task-id="${taskId}"]`);
-          if (!expanderEl) return null;
+          if (!expanderEl) {
+            console.warn(`[getExpanderRect] Expander not found for task ${taskId}`);
+            return null;
+          }
           const rect = expanderEl.getBoundingClientRect();
-          return {
-            left: rect.left - containerRect.left,
-            top: rect.top - containerRect.top + scrollTop,
-            bottom: rect.bottom - containerRect.top + scrollTop,
+          const svgRect = svg.getBoundingClientRect();
+          const result = {
+            left: rect.left - svgRect.left,
+            top: rect.top - svgRect.top + scrollTop,
+            bottom: rect.bottom - svgRect.top + scrollTop,
             height: rect.height,
             width: rect.width,
-            centerX: rect.left - containerRect.left + rect.width / 2
+            centerX: rect.left - svgRect.left + rect.width / 2
           };
+          console.log(`[getExpanderRect] Task ${taskId}:`, result, 'rect:', rect, 'svgRect:', svgRect);
+          return result;
         };
         
         const visibleTasks = todos.filter(t => !t.completed && isTaskVisible(t, todos));
+        console.log('[drawHierarchyLines] Visible tasks:', visibleTasks.length);
         
-        visibleTasks.forEach(task => {
-          const taskRect = getTaskRect(task.id);
-          if (!taskRect) return;
-          
-          const expanderRect = getExpanderRect(task.id);
-          if (!expanderRect) return;
-          
-          if (task.parentId) {
-            const parent = todos.find(t => t.id === task.parentId);
-            if (parent) {
-              const parentExpanderRect = getExpanderRect(parent.id);
-              if (parentExpanderRect) {
-                const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                horizontalLine.setAttribute('x1', (parentExpanderRect.left + parentExpanderRect.width).toString());
-                horizontalLine.setAttribute('y1', taskRect.center.toString());
-                horizontalLine.setAttribute('x2', expanderRect.left.toString());
-                horizontalLine.setAttribute('y2', taskRect.center.toString());
-                horizontalLine.setAttribute('class', 'hierarchy-svg-line');
-                horizontalLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
-                horizontalLine.setAttribute('stroke-width', '2');
-                svg.appendChild(horizontalLine);
-                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                dot.setAttribute('cx', expanderRect.left.toString());
-                dot.setAttribute('cy', taskRect.center.toString());
-                dot.setAttribute('r', 2);
-                dot.setAttribute('class', 'hierarchy-svg-dot');
-                svg.appendChild(dot);
-              }
-            }
-          }
-        });
+        const parentTasks = visibleTasks.filter(t => hasChildren(t, todos) && !t.collapsed);
+        console.log('[drawHierarchyLines] Expanded parent tasks:', parentTasks.length);
         
-        const drawnVerticalLines = new Set();
-        const parentTasks = visibleTasks.filter(t => hasChildren(t, todos));
+        let verticalLinesCount = 0;
         
         parentTasks.forEach(parentTask => {
-          const parentLevel = calculateLevel(parentTask, todos);
-          const lineKey = `v-${parentTask.id}`;
-          if (drawnVerticalLines.has(lineKey)) return;
-          drawnVerticalLines.add(lineKey);
-          
-          const parentRect = getTaskRect(parentTask.id);
-          if (!parentRect) return;
-          
           const parentExpanderRect = getExpanderRect(parentTask.id);
           if (!parentExpanderRect) return;
           
-          const parentIndex = tasksInOrder.findIndex(t => t.id === parentTask.id);
-          if (parentIndex === -1) return;
-          
           const lineX = parentExpanderRect.centerX;
-          let lineTop, lineBottom;
+          const lineTop = parentExpanderRect.bottom;
           
-          if (!parentTask.collapsed) {
-            lineTop = parentExpanderRect.bottom;
-            
-            const children = todos.filter(t => t.parentId === parentTask.id && !t.completed && isTaskVisible(t, todos));
-            if (children.length > 0) {
-              const lastVisibleDescendant = getLastVisibleDescendant(parentTask, todos);
-              const lastDescendantRect = getTaskRect(lastVisibleDescendant.id);
-              if (lastDescendantRect) {
-                lineBottom = lastDescendantRect.bottom;
-              } else {
-                const lastChild = children[children.length - 1];
-                const lastChildRect = getTaskRect(lastChild.id);
-                if (lastChildRect) {
-                  lineBottom = lastChildRect.bottom;
-                } else {
-                  return;
-                }
-              }
-            } else {
-              return;
-            }
-          } else {
-            for (let i = parentIndex + 1; i < tasksInOrder.length; i++) {
-              const nextTaskId = tasksInOrder[i].id;
-              const nextTask = todos.find(t => t.id === nextTaskId && !t.completed && isTaskVisible(t, todos));
-              if (!nextTask) continue;
-              const nextTaskLevel = calculateLevel(nextTask, todos);
-              if (nextTaskLevel === parentLevel) {
-                const nextTaskRect = getTaskRect(nextTask.id);
-                if (nextTaskRect) {
-                  lineTop = parentRect.top;
-                  lineBottom = nextTaskRect.top;
-                  break;
-                }
-              }
-              if (nextTaskLevel < parentLevel) {
-                return;
-              }
-            }
-            if (lineTop === undefined) return;
-          }
+          const lastVisibleDescendant = getLastVisibleDescendant(parentTask, todos);
+          const lastDescendantRect = getTaskRect(lastVisibleDescendant.id);
+          if (!lastDescendantRect) return;
           
-          if (lineTop !== undefined && lineBottom !== undefined && lineBottom > lineTop && lineX > 0) {
+          const lineBottom = lastDescendantRect.bottom;
+          
+          if (lineBottom > lineTop && lineX > 0) {
             const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             verticalLine.setAttribute('x1', lineX.toString());
             verticalLine.setAttribute('y1', lineTop.toString());
@@ -645,19 +598,42 @@
             verticalLine.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
             verticalLine.setAttribute('stroke-width', '2');
             svg.appendChild(verticalLine);
+            verticalLinesCount++;
+            console.log(`[drawHierarchyLines] Added vertical line for task ${parentTask.id}: x=${lineX}, top=${lineTop}, bottom=${lineBottom}`);
           }
         });
         
+        console.log(`[drawHierarchyLines] Added ${verticalLinesCount} vertical lines`);
+        
         const containerHeight = Math.max(container.scrollHeight, containerRect.height);
-        svg.setAttribute('width', containerRect.width.toString());
-        svg.setAttribute('height', containerHeight.toString());
-        svg.setAttribute('viewBox', `0 0 ${containerRect.width} ${containerHeight}`);
+        const svgWidth = containerRect.width;
+        const svgHeight = containerHeight;
+        
+        svg.setAttribute('width', svgWidth.toString());
+        svg.setAttribute('height', svgHeight.toString());
+        svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.style.width = '100%';
-        svg.style.height = `${containerHeight}px`;
+        svg.style.height = `${svgHeight}px`;
         svg.style.position = 'absolute';
         svg.style.top = '0';
         svg.style.left = '0';
+        svg.style.overflow = 'visible';
+        
+        console.log(`[drawHierarchyLines] SVG configured: width=${svgWidth}, height=${svgHeight}, viewBox=0 0 ${svgWidth} ${svgHeight}`);
+        console.log(`[drawHierarchyLines] SVG children count: ${svg.children.length}`);
+        console.log(`[drawHierarchyLines] SVG computed style:`, {
+          display: window.getComputedStyle(svg).display,
+          visibility: window.getComputedStyle(svg).visibility,
+          opacity: window.getComputedStyle(svg).opacity,
+          zIndex: window.getComputedStyle(svg).zIndex,
+          position: window.getComputedStyle(svg).position
+        });
+        
+        if (svg.children.length > 0) {
+          const firstChild = svg.children[0];
+          console.log(`[drawHierarchyLines] First child:`, firstChild.tagName, firstChild.getAttribute('x1'), firstChild.getAttribute('y1'));
+        }
         
       }
       
@@ -792,7 +768,11 @@
         if (!container) return;
         
         if (!preserveExisting) {
+          const svg = container.querySelector('#hierarchy-svg');
           container.innerHTML = '';
+          if (svg) {
+            container.appendChild(svg);
+          }
           activeTaskId = null;
         } else {
           const existingIds = new Set(Array.from(container.querySelectorAll('[data-task-id]')).map(el => el.dataset.taskId));
@@ -821,6 +801,13 @@
             }
           });
           setTimeout(() => {
+            const svg = container.querySelector('#hierarchy-svg');
+            if (!svg) {
+              const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+              newSvg.id = 'hierarchy-svg';
+              newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+              container.insertBefore(newSvg, container.firstChild);
+            }
             drawHierarchyLines(todos, container);
           }, 50);
         });

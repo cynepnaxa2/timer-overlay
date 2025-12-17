@@ -223,13 +223,40 @@ function createTodoWindow() {
       nodeIntegration: false,
       sandbox: true,
       preload: path.join(__dirname, 'preload', 'todoPreload.js'),
-      spellcheck: false
+      spellcheck: false,
+      devTools: true
     }
   });
   todoWindow.once('ready-to-show', async () => {
     ensureDemoTodos();
     todoWindow.maximize();
     todoWindow.show();
+    
+    todoWindow.webContents.once('did-finish-load', () => {
+      setTimeout(() => {
+        todoWindow.webContents.openDevTools();
+      }, 500);
+    });
+    
+    globalShortcut.register('F12', () => {
+      if (todoWindow && !todoWindow.isDestroyed()) {
+        if (todoWindow.webContents.isDevToolsOpened()) {
+          todoWindow.webContents.closeDevTools();
+        } else {
+          todoWindow.webContents.openDevTools();
+        }
+      }
+    });
+    
+    globalShortcut.register('CommandOrControl+Shift+I', () => {
+      if (todoWindow && !todoWindow.isDestroyed()) {
+        if (todoWindow.webContents.isDevToolsOpened()) {
+          todoWindow.webContents.closeDevTools();
+        } else {
+          todoWindow.webContents.openDevTools();
+        }
+      }
+    });
     
     if (process.env.CAPTURE_SCREENSHOT) {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -276,6 +303,49 @@ function createTodoWindow() {
 }
 
 function createTray() {
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Открыть Todo',
+      click: () => {
+        if (!todoWindow || todoWindow.isDestroyed()) {
+          createTodoWindow();
+        } else {
+          todoWindow.focus();
+        }
+      }
+    },
+    {
+      label: 'DevTools Todo',
+      click: () => {
+        if (todoWindow && !todoWindow.isDestroyed()) {
+          if (todoWindow.webContents.isDevToolsOpened()) {
+            todoWindow.webContents.closeDevTools();
+          } else {
+            todoWindow.webContents.openDevTools();
+          }
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Настройки',
+      click: () => {
+        if (!settingsWindow || settingsWindow.isDestroyed()) {
+          createSettingsWindow();
+        } else {
+          settingsWindow.focus();
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Выход',
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  
   if (!currentSettings) currentSettings = readSettings();
   if (!currentSettings.showTray) return;
   
@@ -290,11 +360,6 @@ function createTray() {
     tray = new Tray(nativeImage.createEmpty());
   }
   tray.setToolTip('It\'s time!');
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Открыть настройки', click: () => createSettingsWindow() },
-    { type: 'separator' },
-    { label: 'Выйти', click: () => app.quit() }
-  ]);
   tray.setContextMenu(contextMenu);
   tray.on('click', () => createSettingsWindow());
 }
