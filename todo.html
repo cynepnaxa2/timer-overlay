@@ -39,6 +39,15 @@
         position: relative;
         align-items: center;
       }
+      .task.dragging {
+        opacity: 0.5;
+      }
+      .task.drag-over {
+        border-top: 2px solid rgba(255, 255, 255, 0.8);
+      }
+      .task.drag-over-inside {
+        background: rgba(255, 255, 255, 0.1);
+      }
       .task-expander {
         flex-shrink: 0;
         width: 16px;
@@ -141,6 +150,7 @@
       let focusedElement = null;
       let activeTaskId = null;
       let currentTodos = [];
+      let draggingTaskId = null;
       let todoHotkeys = {
         addSubtask: 'Insert',
         execute: 'F5',
@@ -364,6 +374,23 @@
         return children.length === 0 ? task : getLastVisibleDescendant(children[children.length - 1], todos);
       }
       
+      function getAllDescendants(taskId, todos) {
+        const descendants = [];
+        const children = todos.filter(t => t.parentId === taskId && !t.completed);
+        children.forEach(child => {
+          descendants.push(child.id);
+          descendants.push(...getAllDescendants(child.id, todos));
+        });
+        return descendants;
+      }
+      
+      function isDescendant(ancestorId, taskId, todos) {
+        const task = todos.find(t => t.id === taskId);
+        if (!task || !task.parentId) return false;
+        if (task.parentId === ancestorId) return true;
+        return isDescendant(ancestorId, task.parentId, todos);
+      }
+      
       function drawHierarchyLines(todos, container) {
         if (!container) return;
         
@@ -464,6 +491,99 @@
           taskEl = document.createElement('div');
           taskEl.className = 'task';
           taskEl.dataset.taskId = task.id;
+          taskEl.draggable = true;
+          
+          taskEl.addEventListener('dragstart', (e) => {
+            if (e.target.closest('.task-content') && document.activeElement === e.target.closest('.task-content')) {
+              e.preventDefault();
+              return;
+            }
+            draggingTaskId = task.id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', task.id);
+            taskEl.classList.add('dragging');
+          });
+          
+          taskEl.addEventListener('dragend', () => {
+            taskEl.classList.remove('dragging');
+            draggingTaskId = null;
+            document.querySelectorAll('.task').forEach(t => {
+              t.classList.remove('drag-over', 'drag-over-inside');
+            });
+          });
+          
+          taskEl.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (draggingTaskId && draggingTaskId !== task.id) {
+              const rect = taskEl.getBoundingClientRect();
+              const midY = rect.top + rect.height / 2;
+              if (e.clientY < midY) {
+                taskEl.classList.add('drag-over');
+                taskEl.classList.remove('drag-over-inside');
+              } else {
+                taskEl.classList.add('drag-over-inside');
+                taskEl.classList.remove('drag-over');
+              }
+            }
+          });
+          
+          taskEl.addEventListener('dragleave', () => {
+            taskEl.classList.remove('drag-over', 'drag-over-inside');
+          });
+          
+          taskEl.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const draggingId = draggingTaskId || e.dataTransfer.getData('text/plain');
+            if (!draggingId || draggingId === task.id) return;
+            
+            const draggingTask = currentTodos.find(t => t.id === draggingId);
+            if (!draggingTask) return;
+            
+            if (isDescendant(draggingId, task.id, currentTodos)) {
+              return;
+            }
+            
+            const rect = taskEl.getBoundingClientRect();
+            const midY = rect.top + rect.height / 2;
+            const isBefore = e.clientY < midY;
+            
+            const targetParentId = isBefore ? task.parentId : task.id;
+            const allDraggingIds = [draggingId, ...getAllDescendants(draggingId, currentTodos)];
+            
+            const targetSiblings = currentTodos.filter(t => 
+              t.parentId === targetParentId && 
+              !t.completed && 
+              !allDraggingIds.includes(t.id) &&
+              isTaskVisible(t, currentTodos)
+            ).sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            let insertIndex;
+            if (isBefore) {
+              insertIndex = targetSiblings.findIndex(t => t.id === task.id);
+            } else {
+              insertIndex = targetSiblings.findIndex(t => t.id === task.id) + 1;
+            }
+            
+            const draggingTasks = allDraggingIds.map(id => currentTodos.find(t => t.id === id)).filter(Boolean);
+            targetSiblings.splice(insertIndex, 0, ...draggingTasks);
+            const todoIds = targetSiblings.map(t => t.id);
+            
+            if (targetParentId !== draggingTask.parentId) {
+              await window.todoApi.updateTodo(draggingId, { parentId: targetParentId });
+              const descendants = getAllDescendants(draggingId, currentTodos);
+              for (const descId of descendants) {
+                const descTask = currentTodos.find(t => t.id === descId);
+                if (descTask && descTask.parentId === draggingId) {
+                  await window.todoApi.updateTodo(descId, { parentId: draggingId });
+                }
+              }
+            }
+            
+            await window.todoApi.reorderTodos(todoIds);
+            await refreshTodos();
+          });
           
           const expanderEl = createTaskExpander(task, todos);
           
@@ -499,6 +619,94 @@
             }, 0);
           });
         } else {
+          if (!taskEl.hasAttribute('draggable')) {
+            taskEl.draggable = true;
+            
+            taskEl.addEventListener('dragstart', (e) => {
+              if (e.target.closest('.task-content') && document.activeElement === e.target.closest('.task-content')) {
+                e.preventDefault();
+                return;
+              }
+              draggingTaskId = task.id;
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', task.id);
+              taskEl.classList.add('dragging');
+            });
+            
+            taskEl.addEventListener('dragend', () => {
+              taskEl.classList.remove('dragging');
+              draggingTaskId = null;
+              document.querySelectorAll('.task').forEach(t => {
+                t.classList.remove('drag-over', 'drag-over-inside');
+              });
+            });
+            
+            taskEl.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (draggingTaskId && draggingTaskId !== task.id) {
+                const rect = taskEl.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                  taskEl.classList.add('drag-over');
+                  taskEl.classList.remove('drag-over-inside');
+                } else {
+                  taskEl.classList.add('drag-over-inside');
+                  taskEl.classList.remove('drag-over');
+                }
+              }
+            });
+            
+            taskEl.addEventListener('dragleave', () => {
+              taskEl.classList.remove('drag-over', 'drag-over-inside');
+            });
+            
+            taskEl.addEventListener('drop', async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const draggingId = draggingTaskId || e.dataTransfer.getData('text/plain');
+              if (!draggingId || draggingId === task.id) return;
+              
+              const draggingTask = currentTodos.find(t => t.id === draggingId);
+              if (!draggingTask) return;
+              
+              if (isDescendant(draggingId, task.id, currentTodos)) {
+                return;
+              }
+              
+              const rect = taskEl.getBoundingClientRect();
+              const midY = rect.top + rect.height / 2;
+              const isBefore = e.clientY < midY;
+              
+              const targetParentId = isBefore ? task.parentId : task.id;
+              const allDraggingIds = [draggingId, ...getAllDescendants(draggingId, currentTodos)];
+              
+              const targetSiblings = currentTodos.filter(t => 
+                t.parentId === targetParentId && 
+                !t.completed && 
+                !allDraggingIds.includes(t.id) &&
+                isTaskVisible(t, currentTodos)
+              ).sort((a, b) => (a.order || 0) - (b.order || 0));
+              
+              let insertIndex;
+              if (isBefore) {
+                insertIndex = targetSiblings.findIndex(t => t.id === task.id);
+              } else {
+                insertIndex = targetSiblings.findIndex(t => t.id === task.id) + 1;
+              }
+              
+              const draggingTasks = allDraggingIds.map(id => currentTodos.find(t => t.id === id)).filter(Boolean);
+              targetSiblings.splice(insertIndex, 0, ...draggingTasks);
+              const todoIds = targetSiblings.map(t => t.id);
+              
+              if (targetParentId !== draggingTask.parentId) {
+                await window.todoApi.updateTodo(draggingId, { parentId: targetParentId });
+              }
+              
+              await window.todoApi.reorderTodos(todoIds);
+              await refreshTodos();
+            });
+          }
           const contentEl = taskEl.querySelector('.task-content');
           if (contentEl && contentEl !== focusedElement) {
             if (contentEl.contentEditable === 'true') {
