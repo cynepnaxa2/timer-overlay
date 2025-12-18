@@ -71,8 +71,8 @@
         justify-content: center;
       }
       .hierarchy-svg-line {
-        stroke: rgba(255, 255, 255, 0.7) !important;
-        stroke-width: 1 !important;
+        stroke: rgba(255, 255, 255, 0.6);
+        stroke-width: 0.5;
         fill: none;
       }
       .task-content {
@@ -400,16 +400,14 @@
         if (!svg) {
           svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
           svg.id = 'hierarchy-svg';
-          svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
           container.insertBefore(svg, container.firstChild);
         }
         
-        svg.replaceChildren();
-        
         const containerRect = container.getBoundingClientRect();
         const scrollTop = container.scrollTop;
-        
         const svgHeight = Math.max(container.scrollHeight, containerRect.height);
+        const svgRect = svg.getBoundingClientRect();
+        
         svg.setAttribute('width', containerRect.width);
         svg.setAttribute('height', svgHeight);
         svg.setAttribute('viewBox', `0 0 ${containerRect.width} ${svgHeight}`);
@@ -423,53 +421,30 @@
           overflow: 'visible'
         });
         
-        const svgRect = svg.getBoundingClientRect();
+        const getY = (el) => el ? el.getBoundingClientRect().bottom - svgRect.top + scrollTop : 0;
+        const getX = (el) => el ? el.getBoundingClientRect().left - svgRect.left : 0;
         
-        const taskElementMap = new Map();
-        container.querySelectorAll('.task').forEach(el => {
-          if (el.dataset.taskId) taskElementMap.set(el.dataset.taskId, el);
-        });
+        const parentTasks = todos.filter(t => 
+          !t.completed && 
+          isTaskVisible(t, todos) && 
+          hasChildren(t, todos) && 
+          !t.collapsed
+        );
         
-        const getRect = (el) => {
-          if (!el) return null;
-          const rect = el.getBoundingClientRect();
-          const offsetTop = rect.top - svgRect.top + scrollTop;
-          return {
-            left: rect.left - svgRect.left,
-            top: offsetTop,
-            bottom: rect.bottom - svgRect.top + scrollTop,
-            height: rect.height,
-            width: rect.width
-          };
-        };
-        
-        const getTaskRect = (taskId) => {
-          const el = taskElementMap.get(taskId);
-          if (!el) return null;
-          const base = getRect(el);
-          return { ...base, center: base.top + base.height / 2 };
-        };
-        
-        const getExpanderRect = (taskId) => {
-          return getRect(container.querySelector(`.task-expander[data-task-id="${taskId}"]`));
-        };
-        
-        const visibleTasks = todos.filter(t => !t.completed && isTaskVisible(t, todos));
-        const parentTasks = visibleTasks.filter(t => hasChildren(t, todos) && !t.collapsed);
+        const fragment = document.createDocumentFragment();
         
         parentTasks.forEach(parentTask => {
-          const parentExpanderRect = getExpanderRect(parentTask.id);
-          if (!parentExpanderRect) return;
+          const expander = container.querySelector(`.task-expander[data-task-id="${parentTask.id}"]`);
+          if (!expander) return;
           
-          const lineX = parentExpanderRect.left;
-          const lineHeight = 20;
-          const lineTop = parentExpanderRect.bottom + lineHeight;
+          const lineX = getX(expander);
+          const lineTop = getY(expander) + 20;
           
-          const lastVisibleDescendant = getLastVisibleDescendant(parentTask, todos);
-          const lastDescendantRect = getTaskRect(lastVisibleDescendant.id);
-          if (!lastDescendantRect) return;
+          const lastDescendant = getLastVisibleDescendant(parentTask, todos);
+          const lastTask = container.querySelector(`[data-task-id="${lastDescendant.id}"]`);
+          if (!lastTask) return;
           
-          const lineBottom = lastDescendantRect.bottom;
+          const lineBottom = getY(lastTask);
           
           if (lineBottom > lineTop && lineX > 0) {
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -478,11 +453,12 @@
             line.setAttribute('x2', lineX);
             line.setAttribute('y2', lineBottom);
             line.setAttribute('class', 'hierarchy-svg-line');
-            line.setAttribute('stroke', 'rgba(255, 255, 255, 0.9)');
-            line.setAttribute('stroke-width', '1');
-            svg.appendChild(line);
+            fragment.appendChild(line);
           }
         });
+        
+        svg.replaceChildren();
+        svg.appendChild(fragment);
       }
       
       function renderTask(task, todos, container) {
