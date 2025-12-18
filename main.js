@@ -509,7 +509,10 @@ function registerIpc() {
   
   ipcMain.handle('start-timer', (_event, motivationWord) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('timer-started', { motivationWord });
+      mainWindow.webContents.send('restart-cycle');
+      if (motivationWord) {
+        mainWindow.webContents.send('timer-started', { motivationWord });
+      }
     }
     return true;
   });
