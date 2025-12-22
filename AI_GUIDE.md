@@ -6,26 +6,57 @@
   - Todo window: fullscreen todo list with hierarchical tasks, rich text editing, drag & drop, hotkeys, and timer integration.
 
 ## Key files
-- `main.js`: Electron main process, creates overlay window (`index.html`), settings window (`settings.html`), todo window (`todo.html`), tray, IPC, timers, hotkey reset, autostart/tray toggles.
+
+**Main process:**
+- `main.js`: Electron main process, creates overlay window (`index.html`), settings window (`settings.html`), todo window (`todo.html`), tray, IPC handlers, timers, hotkey reset, autostart/tray toggles.
+
+**Overlay component:**
 - `index.html`: Overlay renderer. Animates indicator upward with CSS; reacts to IPC events (`counter-updated`, `mode-updated`, `level-updated`, `restart-cycle`). Restart-cycle resets animation to bottom.
+- `preload/overlayPreload.js`: Exposes safe IPC API (`overlayApi`) to overlay renderer.
+
+**Settings component:**
 - `settings.html`: Settings UI. Live updates via IPC: size, opacity, color, duration (any value >=1s), timing (linear/steps), autostart, tray visibility, mode, level, reset hotkey, stats view/reset.
-- `todo.html`: Todo list UI. Fullscreen window with hierarchical tasks, rich text editing, drag & drop.
+- `preload/settingsPreload.js`: Exposes safe IPC API (`settingsApi`) to settings renderer.
+
+**Todo component:**
+- `todo.html`: Todo list UI. Fullscreen window with hierarchical tasks. Подключает модули через script теги.
+- `preload/todoPreload.js`: Exposes safe IPC API (`todoApi`) to todo renderer.
+- `src/todo/state.js`: Централизованное управление состоянием (focusedElement, activeTaskId, currentTodos, draggingTaskId, todoHotkeys, updateTimeout).
+- `src/todo/hierarchy.js`: Утилиты для работы с иерархией задач (calculateLevel, isTaskVisible, hasChildren, getLastVisibleDescendant, getAllDescendants, isDescendant).
+- `src/todo/hierarchyLines.js`: Отрисовка SVG линий иерархии (drawHierarchyLines).
+- `src/todo/dragDrop.js`: Логика drag&drop для перетаскивания задач (setupDragDrop).
+- `src/todo/hotkeys.js`: Обработка горячих клавиш (parseHotkey, matchesHotkey, setupHotkeys).
+- `src/todo/renderer.js`: Рендеринг задач (renderTask, renderTasks, createTaskExpander, createTaskActions, focusTask, refreshTodos).
+
+**Utils components:**
 - `src/utils/style.js`: Builds CSS variables for overlay from settings (duration, timing, sizes, colors).
 - `src/utils/counters.js`: Counter logic (update, format, reset display counters).
+- `src/utils/positioning.js`: Window positioning utilities (computeWindowBoundsForRightEdge).
+- `src/utils/color.js`: Color conversion utilities (hexToRgb).
+- `src/utils/todoColors.js`: Color mapping for task hierarchy levels (rainbow colors: purple, blue, cyan, green, yellow, orange, red).
+- `src/utils/richEditor.js`: Rich text editor utilities (autoResize, setupRichEditor). Auto-resizes contenteditable elements, handles paste events, focus tracking, debounce для сохранения, интеграция с API.
+- `src/utils/trayIcon.js`: Создание иконки для системного трея.
+
+**Store components:**
 - `src/store/settingsStore.js`: Settings persistence (JSON in userData). Defaults include durationSeconds=60, diameterPx=60, opacity=0.55, level=1, mode default money.
 - `src/store/todoStore.js`: Todo tasks persistence (JSON in userData). Functions: readTodos, writeTodos, createTodo, updateTodo, deleteTodo, reorderTodos, loadTodosFromFile, ensureDemoTodos. Automatically creates demo tasks on first run.
-- `demo-todos.json`: Demo file with example tasks for testing.
-- `src/utils/todoColors.js`: Color mapping for task hierarchy levels (rainbow colors: purple, blue, cyan, green, yellow, orange, red).
-- `src/utils/richEditor.js`: Rich text editor utilities (autoResize, setupRichEditor). Auto-resizes contenteditable elements and handles paste events.
-- `src/todo/renderer.js`: Task rendering logic (calculateLevel, renderTask, renderTasks). Also embedded in todo.html for browser execution.
-- `src/config/modes.js`: Motivation modes config and helpers.
-- `preload/overlayPreload.js` / `preload/settingsPreload.js` / `preload/todoPreload.js`: Expose safe IPC APIs to renderer.
+
+**Config components:**
+- `src/config/modes.js`: Motivation modes config and helpers (money, popularity, selfDevelopment, success, health, sport, creativity, learning).
+
+**Test files:**
 - `tests/unit/positioning.test.js`, `tests/unit/todoStore.test.js`, `tests/unit/todoColors.test.js`, `tests/unit/todoRenderer.test.js`, `tests/unit/richEditor.test.js`, `tests/integration/smoke.test.js`, `tests/integration/todoWindow.test.js`: Jest projects (unit, integration).
+
+**Demo data:**
+- `demo-todos.json`: Demo file with example tasks for testing.
 
 ## Behaviors to know
 - Counter ticks each cycle (`durationSeconds`), updating stats and display counters per mode.
 - Reset hotkey (default `Ctrl+Shift+R`): clears display counters, restarts timer and sends `restart-cycle` so animation and cycle start from bottom/zero.
 - Overlay ignores pointer events; clicks go to underlying windows.
+
+## Development principles
+- При разработке, если появляется логически независимый функционал, который можно вынести в отдельный файл и переиспользовать, то нужно так и сделать - вынести в отдельный файл и переиспользовать.
 
 ## Commands
 - Install: `npm install`

@@ -1,14 +1,40 @@
 function autoResize(element) {
+  if (!element) return;
   element.style.height = 'auto';
-  element.style.height = element.scrollHeight + 'px';
+  element.style.height = Math.max(40, element.scrollHeight) + 'px';
 }
 
-function setupRichEditor(element, onContentChange) {
+function setupRichEditor(element, taskId, state, drawHierarchyLines) {
+  element.addEventListener('focus', () => {
+    state.focusedElement = element;
+  });
+  
+  element.addEventListener('blur', () => {
+    if (state.focusedElement === element) {
+      state.focusedElement = null;
+    }
+  });
+  
+  const debouncedUpdate = () => {
+    clearTimeout(state.updateTimeout);
+    state.updateTimeout = setTimeout(() => {
+      if (window.todoApi) {
+        window.todoApi.updateTodo(taskId, { content: element.innerHTML });
+        const container = document.getElementById('todo-container');
+        if (container && state.currentTodos) {
+          setTimeout(() => {
+            if (drawHierarchyLines) {
+              drawHierarchyLines(state.currentTodos, container);
+            }
+          }, 50);
+        }
+      }
+    }, 300);
+  };
+  
   element.addEventListener('input', () => {
     autoResize(element);
-    if (onContentChange) {
-      onContentChange(element.innerHTML);
-    }
+    if (window.todoApi) debouncedUpdate();
   });
   
   element.addEventListener('paste', (e) => {
@@ -27,15 +53,24 @@ function setupRichEditor(element, onContentChange) {
     selection.addRange(range);
     
     autoResize(element);
-    if (onContentChange) {
-      onContentChange(element.innerHTML);
+    if (window.todoApi) {
+      window.todoApi.updateTodo(taskId, { content: element.innerHTML });
     }
   });
   
-  autoResize(element);
+  setTimeout(() => {
+    autoResize(element);
+  }, 0);
 }
 
-module.exports = {
-  autoResize,
-  setupRichEditor
-};
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    autoResize,
+    setupRichEditor
+  };
+} else {
+  window.richEditor = {
+    autoResize,
+    setupRichEditor
+  };
+}
