@@ -11,6 +11,16 @@ const hierarchyLines = typeof window !== 'undefined' && window.todoHierarchyLine
   ? window.todoHierarchyLines 
   : require('./hierarchyLines');
 
+function removeActiveFromAllTasks() {
+  document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
+}
+
+function activateTask(taskEl, taskId, state) {
+  removeActiveFromAllTasks();
+  taskEl.classList.add('active');
+  state.activeTaskId = taskId;
+}
+
 function updateExpanderIcon(iconEl, task, todos) {
   const hasChildrenTasks = hierarchy.hasChildren(task, todos);
   if (!hasChildrenTasks) {
@@ -99,9 +109,7 @@ function focusTask(taskId, state) {
         const selection = window.getSelection();
         selection.removeAllRanges();
         selection.addRange(range);
-        document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
-        taskEl.classList.add('active');
-        state.activeTaskId = taskId;
+        activateTask(taskEl, taskId, state);
         state.focusedElement = contentEl;
       }
     }
@@ -126,15 +134,10 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
     contentEl.spellcheck = false;
     contentEl.innerHTML = task.content || '';
     
-    const activateTask = () => {
-      document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
-      taskEl.classList.add('active');
-      state.activeTaskId = task.id;
-    };
     contentEl.setAttribute('data-click-handler', 'true');
     contentEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      activateTask();
+      activateTask(taskEl, task.id, state);
     });
     
     const actionsEl = createTaskActions(task.id, state, refreshTodos, focusTask);
@@ -185,15 +188,10 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
       taskEl.appendChild(actionsEl);
     }
     if (contentEl && !contentEl.hasAttribute('data-click-handler')) {
-      const activateTask = () => {
-        document.querySelectorAll('.task').forEach(t => t.classList.remove('active'));
-        taskEl.classList.add('active');
-        state.activeTaskId = task.id;
-      };
       contentEl.setAttribute('data-click-handler', 'true');
       contentEl.addEventListener('click', (e) => {
         e.stopPropagation();
-        activateTask();
+        activateTask(taskEl, task.id, state);
       });
     }
     if (state.activeTaskId === task.id) {

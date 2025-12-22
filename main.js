@@ -158,7 +158,6 @@ async function applyOverlayStyles() {
       }
       
       // Send current counter value (используем displayCounters для отображения)
-      const { getFormattedCounter } = require('./src/utils/counters');
       const modeId = currentSettings.mode || 'money';
       const formatted = getFormattedCounter(
         currentSettings.displayCounters || {}, 
@@ -464,27 +463,27 @@ function registerIpc() {
     return readTodos();
   });
   
-  ipcMain.handle('create-todo', (_event, content, parentId) => {
-    const todo = createTodo(content, parentId);
+  function notifyTodosUpdated() {
     if (todoWindow && !todoWindow.isDestroyed()) {
       todoWindow.webContents.send('todos-updated', readTodos());
     }
+  }
+  
+  ipcMain.handle('create-todo', (_event, content, parentId) => {
+    const todo = createTodo(content, parentId);
+    notifyTodosUpdated();
     return todo;
   });
   
   ipcMain.handle('update-todo', (_event, id, updates) => {
     const todo = updateTodo(id, updates);
-    if (todoWindow && !todoWindow.isDestroyed()) {
-      todoWindow.webContents.send('todos-updated', readTodos());
-    }
+    notifyTodosUpdated();
     return todo;
   });
   
   ipcMain.handle('delete-todo', (_event, id) => {
     deleteTodo(id);
-    if (todoWindow && !todoWindow.isDestroyed()) {
-      todoWindow.webContents.send('todos-updated', readTodos());
-    }
+    notifyTodosUpdated();
     return true;
   });
   
@@ -501,9 +500,7 @@ function registerIpc() {
     const task = todos.find(t => t.id === taskId);
     if (!task) return null;
     const updated = updateTodo(taskId, { collapsed: !task.collapsed });
-    if (todoWindow && !todoWindow.isDestroyed()) {
-      todoWindow.webContents.send('todos-updated', readTodos());
-    }
+    notifyTodosUpdated();
     return updated;
   });
   
@@ -538,7 +535,7 @@ function registerIpc() {
     const filePath = result.filePaths[0];
     const success = loadTodosFromFile(filePath);
     if (success) {
-      todoWindow.webContents.send('todos-updated', readTodos());
+      notifyTodosUpdated();
     }
     return { success, error: success ? null : 'Failed to load file' };
   });
@@ -546,13 +543,11 @@ function registerIpc() {
   ipcMain.handle('load-demo-todos', () => {
     const demoPath = path.join(__dirname, 'demo-todos.json');
     const success = loadTodosFromFile(demoPath);
-    if (success && todoWindow && !todoWindow.isDestroyed()) {
-      todoWindow.webContents.send('todos-updated', readTodos());
-    } else if (!success) {
+    if (success) {
+      notifyTodosUpdated();
+    } else {
       ensureDemoTodos();
-      if (todoWindow && !todoWindow.isDestroyed()) {
-        todoWindow.webContents.send('todos-updated', readTodos());
-      }
+      notifyTodosUpdated();
     }
     return success || true;
   });
@@ -560,8 +555,8 @@ function registerIpc() {
   ipcMain.handle('load-large-demo', () => {
     const demoPath = path.join(__dirname, 'demo-todos-large.json');
     const success = loadTodosFromFile(demoPath);
-    if (success && todoWindow && !todoWindow.isDestroyed()) {
-      todoWindow.webContents.send('todos-updated', readTodos());
+    if (success) {
+      notifyTodosUpdated();
     }
     return success;
   });
@@ -642,7 +637,6 @@ function registerIpc() {
         if (level === 3) {
           mainWindow.webContents.send('mode-updated', modeData);
         }
-        const { getFormattedCounter } = require('./src/utils/counters');
         const modeId = currentSettings.mode || 'money';
         const formatted = getFormattedCounter(
           currentSettings.displayCounters || {},
@@ -673,7 +667,6 @@ function registerIpc() {
         // Отправляем mode-updated для всех уровней
         mainWindow.webContents.send('mode-updated', modeData);
         // Также отправляем counter-updated с текущим значением (используем displayCounters)
-        const { getFormattedCounter } = require('./src/utils/counters');
         const modeId = currentSettings.mode || 'money';
         const formatted = getFormattedCounter(
           currentSettings.displayCounters || {},
@@ -788,7 +781,6 @@ function registerResetHotkey() {
       
       // Обновляем overlay
       if (mainWindow && !mainWindow.isDestroyed()) {
-        const { getFormattedCounter } = require('./src/utils/counters');
         const modeId = currentSettings.mode || 'money';
         const formatted = getFormattedCounter(currentSettings.displayCounters || {}, modeId);
         const mode = getMode(modeId);
