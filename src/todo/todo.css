@@ -1,0 +1,308 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+body {
+  background: #1a1a1a;
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+#todo-header {
+  padding: 0;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+.header-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.header-table th {
+  padding: 6px 4px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: normal;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.header-table th:first-child {
+  text-align: left;
+  padding-left: 12px;
+}
+#add-root-task-btn {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+#add-root-task-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+#todo-container {
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+#hierarchy-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+.task {
+  width: 100%;
+  min-height: 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  position: relative;
+  align-items: center;
+}
+.task.dragging {
+  opacity: 0.5;
+}
+.task.drag-over {
+  border-top: 2px solid rgba(255, 255, 255, 0.8);
+}
+.task.drag-over-inside {
+  background: rgba(255, 255, 255, 0.1);
+}
+.task-expander {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: inherit;
+  user-select: none;
+  align-self: center;
+}
+.task-expander:hover {
+  opacity: 0.8;
+}
+.task-expander-icon {
+  font-size: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hierarchy-svg-line {
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 0.5;
+  fill: none;
+}
+.task-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 12px;
+  outline: none;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  overflow: hidden;
+  resize: none;
+  color: #fff;
+  background: transparent;
+}
+.task-content:focus {
+  background: rgba(255, 255, 255, 0.05);
+}
+.task.completed {
+  opacity: 0.5;
+  color: rgba(255, 255, 255, 0.6);
+}
+.task.completed .task-content {
+  text-decoration: line-through;
+}
+.task-actions {
+  display: none;
+  padding: 8px 12px 8px 12px;
+  padding-right: 24px;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: nowrap;
+}
+.task.active .task-actions {
+  display: flex;
+  gap: 8px;
+}
+.task-actions button {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+}
+.task-actions button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+.task-meta {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.task-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.task-cells {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: 12px;
+}
+.task-cell {
+  width: 40px;
+  display: flex;
+  justify-content: center;
+}
+.cost-gain-input {
+  width: 100%;
+  padding: 2px 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  text-align: center;
+}
+.cost-gain-input::-webkit-outer-spin-button,
+.cost-gain-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.context-icons {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+.context-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+}
+.context-icon.active {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.context-icon:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.context-select {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+}
+.variants {
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.variant {
+  margin: 8px 0;
+  margin-left: 20px;
+}
+.variant-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.variant-radio {
+  margin-right: 4px;
+}
+.variant-name {
+  flex: 1;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  min-width: 0;
+}
+.steps {
+  margin-left: 20px;
+  margin-top: 4px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.step-checkbox {
+  margin-right: 4px;
+}
+.step-name {
+  flex: 1;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  min-width: 0;
+}
+.step-time {
+  width: 60px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+}
+.roi-display {
+  color: #00ff00;
+  font-weight: bold;
+}
+
