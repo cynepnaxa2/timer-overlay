@@ -1,6 +1,32 @@
 const { autoResize, setupRichEditor } = require('../../src/utils/richEditor');
 
 describe('richEditor', () => {
+  beforeEach(() => {
+    global.window = {
+      todoApi: null,
+      getSelection: jest.fn(() => ({
+        rangeCount: 0,
+        removeAllRanges: jest.fn(),
+        addRange: jest.fn()
+      })),
+      clipboardData: null
+    };
+    global.document = {
+      getElementById: jest.fn(() => null)
+    };
+    global.setTimeout = jest.fn((fn) => {
+      if (fn) fn();
+      return 123;
+    });
+    global.clearTimeout = jest.fn();
+  });
+
+  afterEach(() => {
+    delete global.window;
+    delete global.document;
+    jest.clearAllTimers();
+  });
+
   describe('autoResize', () => {
     test('sets height to scrollHeight', () => {
       const element = {
@@ -19,6 +45,15 @@ describe('richEditor', () => {
       autoResize(element);
       expect(element.style.height).toBe('200px');
     });
+
+    test('sets minimum height to 40px', () => {
+      const element = {
+        style: {},
+        scrollHeight: 20
+      };
+      autoResize(element);
+      expect(element.style.height).toBe('40px');
+    });
   });
 
   describe('setupRichEditor', () => {
@@ -26,9 +61,11 @@ describe('richEditor', () => {
       const element = {
         style: {},
         scrollHeight: 50,
+        innerHTML: '',
         addEventListener: jest.fn()
       };
-      setupRichEditor(element);
+      const state = { updateTimeout: null, currentTodos: [] };
+      setupRichEditor(element, 'task1', state);
       expect(element.addEventListener).toHaveBeenCalledWith('input', expect.any(Function));
     });
 
@@ -36,36 +73,25 @@ describe('richEditor', () => {
       const element = {
         style: {},
         scrollHeight: 50,
+        innerHTML: '',
         addEventListener: jest.fn()
       };
-      setupRichEditor(element);
+      const state = { updateTimeout: null, currentTodos: [] };
+      setupRichEditor(element, 'task1', state);
       expect(element.addEventListener).toHaveBeenCalledWith('paste', expect.any(Function));
     });
 
-    test('calls autoResize on init', () => {
-      const element = {
-        style: {},
-        scrollHeight: 75,
-        addEventListener: jest.fn()
-      };
-      setupRichEditor(element);
-      expect(element.style.height).toBe('75px');
-    });
-
-    test('calls onContentChange callback on input', () => {
+    test('adds focus and blur event listeners', () => {
       const element = {
         style: {},
         scrollHeight: 50,
-        innerHTML: 'test',
-        addEventListener: jest.fn((event, handler) => {
-          if (event === 'input') {
-            handler();
-          }
-        })
+        innerHTML: '',
+        addEventListener: jest.fn()
       };
-      const callback = jest.fn();
-      setupRichEditor(element, callback);
-      expect(callback).toHaveBeenCalledWith('test');
+      const state = { updateTimeout: null, currentTodos: [], focusedElement: null };
+      setupRichEditor(element, 'task1', state);
+      expect(element.addEventListener).toHaveBeenCalledWith('focus', expect.any(Function));
+      expect(element.addEventListener).toHaveBeenCalledWith('blur', expect.any(Function));
     });
   });
 });

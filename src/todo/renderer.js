@@ -1,45 +1,17 @@
-function getHierarchy() {
-  if (typeof window !== 'undefined' && window.todoHierarchy) {
-    return window.todoHierarchy;
-  }
-  if (typeof require !== 'undefined') {
-    return require('./hierarchy');
-  }
-  throw new Error('todoHierarchy not found');
-}
-
-function getDragDrop() {
-  if (typeof window !== 'undefined' && window.todoDragDrop) {
-    return window.todoDragDrop;
-  }
-  if (typeof require !== 'undefined') {
-    return require('./dragDrop');
-  }
-  throw new Error('todoDragDrop not found');
-}
-
-function getRichEditor() {
-  if (typeof window !== 'undefined' && window.richEditor) {
-    return window.richEditor;
-  }
-  if (typeof require !== 'undefined') {
-    return require('../utils/richEditor');
-  }
-  throw new Error('richEditor not found');
-}
-
-function getHierarchyLines() {
-  if (typeof window !== 'undefined' && window.todoHierarchyLines) {
-    return window.todoHierarchyLines;
-  }
-  if (typeof require !== 'undefined') {
-    return require('./hierarchyLines');
-  }
-  throw new Error('todoHierarchyLines not found');
-}
+const hierarchy = typeof window !== 'undefined' && window.todoHierarchy 
+  ? window.todoHierarchy 
+  : require('./hierarchy');
+const dragDrop = typeof window !== 'undefined' && window.todoDragDrop 
+  ? window.todoDragDrop 
+  : require('./dragDrop');
+const richEditor = typeof window !== 'undefined' && window.richEditor 
+  ? window.richEditor 
+  : require('../utils/richEditor');
+const hierarchyLines = typeof window !== 'undefined' && window.todoHierarchyLines 
+  ? window.todoHierarchyLines 
+  : require('./hierarchyLines');
 
 function updateExpanderIcon(iconEl, task, todos) {
-  const hierarchy = getHierarchy();
   const hasChildrenTasks = hierarchy.hasChildren(task, todos);
   if (!hasChildrenTasks) {
     iconEl.textContent = '●';
@@ -55,7 +27,6 @@ function updateExpanderIcon(iconEl, task, todos) {
 }
 
 function createTaskExpander(task, todos, state, renderTasks) {
-  const hierarchy = getHierarchy();
   const expanderEl = document.createElement('div');
   expanderEl.className = 'task-expander';
   expanderEl.dataset.taskId = task.id;
@@ -138,11 +109,6 @@ function focusTask(taskId, state) {
 }
 
 function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
-  const hierarchy = getHierarchy();
-  const dragDrop = getDragDrop();
-  const richEditor = getRichEditor();
-  const hierarchyLines = getHierarchyLines();
-  
   let taskEl = container.querySelector(`[data-task-id="${task.id}"]`);
   
   if (!taskEl) {
@@ -243,10 +209,6 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
 }
 
 function renderTasks(todos, preserveExisting, state) {
-  const hierarchy = getHierarchy();
-  const richEditor = getRichEditor();
-  const hierarchyLines = getHierarchyLines();
-  
   state.currentTodos = todos;
   const container = document.getElementById('todo-container');
   if (!container) return;
@@ -279,10 +241,6 @@ function renderTasks(todos, preserveExisting, state) {
 }
 
 async function refreshTodos(state) {
-  if (!window.todoApi) {
-    console.error('window.todoApi is not available');
-    return;
-  }
   const todos = await window.todoApi.getTodos();
   renderTasks(todos, true, state);
 }

@@ -143,7 +143,6 @@
       const state = window.todoState.createTodoState();
       const renderer = window.todoRenderer;
       const hotkeys = window.todoHotkeys;
-      const hierarchyLines = window.todoHierarchyLines;
       
       function refreshTodos() {
         return renderer.refreshTodos(state);
@@ -160,7 +159,7 @@
           clearTimeout(scrollTimeout);
           scrollTimeout = setTimeout(() => {
             if (state.currentTodos) {
-              hierarchyLines.drawHierarchyLines(state.currentTodos, container);
+              window.todoHierarchyLines.drawHierarchyLines(state.currentTodos, container);
             }
           }, 50);
         });
@@ -173,43 +172,28 @@
         }
       });
       
-      if (!window.todoRenderer || !window.todoHotkeys || !window.todoHierarchyLines || !window.todoState) {
-        console.error('Modules not loaded:', {
-          todoRenderer: !!window.todoRenderer,
-          todoHotkeys: !!window.todoHotkeys,
-          todoHierarchyLines: !!window.todoHierarchyLines,
-          todoState: !!window.todoState
-        });
-        console.error('Waiting for modules to load...');
-      }
-      
       hotkeys.setupHotkeys(state, refreshTodos, focusTask);
       
       if (window.todoApi) {
         window.todoApi.getTodoHotkeys().then(hotkeys => {
           state.todoHotkeys = hotkeys;
-        }).catch(err => console.error('Error loading hotkeys:', err));
+        });
         
         window.todoApi.getTodos().then(async todos => {
           if (todos.length === 0) {
             try {
               await window.todoApi.loadLargeDemo();
               todos = await window.todoApi.getTodos();
-            } catch (err) {
-              console.error('Error loading demo:', err);
+            } catch {
               todos = [];
             }
           }
           renderer.renderTasks(todos, false, state);
-        }).catch(err => {
-          console.error('Error loading todos:', err);
         });
         
         window.todoApi.onTodosUpdated((todos) => {
           renderer.renderTasks(todos, state.focusedElement !== null, state);
         });
-      } else {
-        console.error('window.todoApi is not available');
       }
       
       window.loadLargeDemo = async function() {

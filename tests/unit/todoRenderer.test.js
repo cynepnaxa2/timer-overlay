@@ -1,4 +1,4 @@
-const { calculateLevel } = require('../../src/todo/renderer');
+const { calculateLevel } = require('../../src/todo/hierarchy');
 
 describe('todoRenderer', () => {
   describe('calculateLevel', () => {
