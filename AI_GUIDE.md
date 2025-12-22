@@ -33,7 +33,6 @@
 - `src/utils/counters.js`: Counter logic (update, format, reset display counters).
 - `src/utils/positioning.js`: Window positioning utilities (computeWindowBoundsForRightEdge).
 - `src/utils/color.js`: Color conversion utilities (hexToRgb).
-- `src/utils/todoColors.js`: Color mapping for task hierarchy levels (rainbow colors: purple, blue, cyan, green, yellow, orange, red).
 - `src/utils/richEditor.js`: Rich text editor utilities (autoResize, setupRichEditor). Auto-resizes contenteditable elements, handles paste events, focus tracking, debounce для сохранения, интеграция с API.
 - `src/utils/trayIcon.js`: Создание иконки для системного трея.
 
@@ -45,7 +44,7 @@
 - `src/config/modes.js`: Motivation modes config and helpers (money, popularity, selfDevelopment, success, health, sport, creativity, learning).
 
 **Test files:**
-- `tests/unit/positioning.test.js`, `tests/unit/todoStore.test.js`, `tests/unit/todoColors.test.js`, `tests/unit/todoRenderer.test.js`, `tests/unit/richEditor.test.js`, `tests/integration/smoke.test.js`, `tests/integration/todoWindow.test.js`: Jest projects (unit, integration).
+- `tests/unit/positioning.test.js`, `tests/unit/todoStore.test.js`, `tests/unit/todoRenderer.test.js`, `tests/unit/richEditor.test.js`, `tests/integration/smoke.test.js`, `tests/integration/todoWindow.test.js`: Jest projects (unit, integration).
 
 **Demo data:**
 - `demo-todos.json`: Demo file with example tasks for testing.
@@ -62,6 +61,12 @@
   - Проверять консоль браузера/приложения на отсутствие ошибок
   - Убеждаться, что функционал работает корректно
   - Только после этого переходить к следующему кусочку
+- После получения одобрения о том, что функционал работает, нужно просмотреть весь код на предмет оптимизации, переиспользования и уменьшения размера кодовой базы:
+  - Найти неиспользуемые файлы и удалить их
+  - Найти дублирование кода и вынести в переиспользуемые функции
+  - Оптимизировать импорты и зависимости
+  - Упростить сложные функции
+  - Удалить неиспользуемый код
 
 ## Commands
 - Install: `npm install`
