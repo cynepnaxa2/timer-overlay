@@ -1,9 +1,19 @@
 # AI Guide for This Project
 
+**ВАЖНО: Перед началом работы с проектом ВСЕГДА читайте README.md для понимания:**
+- Что это за проект и его философия
+- Какие функции реализованы
+- Какие функции планируются
+- Общая структура и назначение компонентов
+
+Для общей информации о проекте см. [README.md](README.md). Список реализованного и планируемого функционала см. [README.md](README.md).
+
 ## What the app is
 - Electron application with two windows:
   - Overlay window: shows a moving indicator on the right edge of the primary screen. Always-on-top, transparent, ignores mouse/keyboard (clicks pass through). Three levels: 1) circle, 2) digits only, 3) symbol + digits (expert). Motivation modes (money, popularity, selfDevelopment, success, health, sport, creativity, learning) with per-minute formulas and saved stats.
   - Todo window: fullscreen todo list with hierarchical tasks, rich text editing, drag & drop, hotkeys, and timer integration.
+
+**Planned features:** See [README.md](README.md) section "Планируемый функционал" for complete list of planned Todo features.
 
 ## Key files
 
@@ -37,8 +47,8 @@
 - `src/utils/trayIcon.js`: Создание иконки для системного трея.
 
 **Store components:**
-- `src/store/settingsStore.js`: Settings persistence (JSON in userData). Defaults include durationSeconds=60, diameterPx=60, opacity=0.55, level=1, mode default money.
-- `src/store/todoStore.js`: Todo tasks persistence (JSON in userData). Functions: readTodos, writeTodos, createTodo, updateTodo, deleteTodo, reorderTodos, loadTodosFromFile, ensureDemoTodos. Automatically creates demo tasks on first run.
+- `src/store/settingsStore.js`: Settings persistence (JSON in userData). Defaults include durationSeconds=60, diameterPx=60, opacity=0.55, level=1, mode default money. Для общей информации о настройках см. [README.md](README.md).
+- `src/store/todoStore.js`: Todo tasks persistence (JSON in userData). Functions: readTodos, writeTodos, createTodo, updateTodo, deleteTodo, reorderTodos, loadTodosFromFile, ensureDemoTodos. Automatically creates demo tasks on first run. Список реализованного и планируемого функционала см. [README.md](README.md).
 
 **Config components:**
 - `src/config/modes.js`: Motivation modes config and helpers (money, popularity, selfDevelopment, success, health, sport, creativity, learning).
