@@ -88,6 +88,7 @@
       "main.js",
       "index.html",
       "settings.html",
+      "todo.html",
       "preload/**/*",
       "src/**/*",
       "assets/**/*",

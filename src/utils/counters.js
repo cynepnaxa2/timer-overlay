@@ -101,8 +101,6 @@ module.exports = {
   updateCounter,
   getFormattedCounter,
   getFormattedStats,
-  getAllFormattedCounters,
-  resetCounter,
   resetDisplayCounters
 };
 

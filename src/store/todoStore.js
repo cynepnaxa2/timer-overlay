@@ -171,6 +171,5 @@ module.exports = {
   deleteTodo,
   reorderTodos,
   loadTodosFromFile,
-  ensureDemoTodos,
-  getTodosPath
+  ensureDemoTodos
 };

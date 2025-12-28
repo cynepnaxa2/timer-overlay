@@ -5,7 +5,7 @@ const { readSettings, writeSettings, isFirstRun } = require('./src/store/setting
 const { buildOverlayCssVariables } = require('./src/utils/style');
 const { createTrayIcon } = require('./src/utils/trayIcon');
 const { getMode, getAllModes } = require('./src/config/modes');
-const { updateCounter, getFormattedCounter, getFormattedStats, resetDisplayCounters } = require('./src/utils/counters');
+const { updateCounter, getFormattedCounter, resetDisplayCounters } = require('./src/utils/counters');
 const { readTodos, createTodo, updateTodo, deleteTodo, reorderTodos, loadTodosFromFile, ensureDemoTodos } = require('./src/store/todoStore');
 
 let mainWindow = null;
