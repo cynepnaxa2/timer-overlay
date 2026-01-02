@@ -182,28 +182,18 @@
       const renderer = window.todoRenderer;
       const hotkeys = window.todoHotkeys;
       
-      function renderTasks(todos, preserveExisting, state) {
-        return renderer.renderTasks(todos, preserveExisting, state);
-      }
-
-      function refreshTodos() {
-        return renderer.refreshTodos(state);
-      }
-      
-      function focusTask(taskId) {
-        return renderer.focusTask(taskId, state);
-      }
+      const doRefresh = () => renderer.refreshTodos(state);
+      const doFocus = (id) => renderer.focusTask(id, state);
       
       const container = document.getElementById('todo-container');
       const innerContainer = document.getElementById('todo-container-inner');
-      let scrollTimeout = null;
+      
       if (container) {
+        let scrollTimeout = null;
         container.addEventListener('scroll', () => {
           clearTimeout(scrollTimeout);
           scrollTimeout = setTimeout(() => {
-            if (state.currentTodos) {
-              window.todoHierarchyLines.drawHierarchyLines(state.currentTodos, innerContainer);
-            }
+            if (state.currentTodos) window.todoHierarchyLines.drawHierarchyLines(state.currentTodos, innerContainer);
           }, 50);
         });
       }
@@ -215,46 +205,26 @@
         }
       });
       
-      hotkeys.setupHotkeys(state, refreshTodos, focusTask);
+      hotkeys.setupHotkeys(state, doRefresh, doFocus);
 
       document.getElementById('btn-create-root').addEventListener('click', () => {
-        renderer.createAndFocusTask(null, state, refreshTodos);
+        renderer.createAndFocusTask(null, state, doRefresh);
       });
       
       if (window.todoApi) {
-        window.todoApi.getTodoHotkeys().then(hotkeys => {
-          state.todoHotkeys = hotkeys;
-        });
+        window.todoApi.getTodoHotkeys().then(hks => { if (hks) state.todoHotkeys = hks; });
         
         window.todoApi.getTodos().then(async todos => {
           if (todos.length === 0) {
-            try {
-              await window.todoApi.loadLargeDemo();
-              todos = await window.todoApi.getTodos();
-            } catch {
-              todos = [];
-            }
+            await window.todoApi.loadLargeDemo();
+            todos = await window.todoApi.getTodos();
           }
           renderer.renderTasks(todos, false, state);
         });
         
-        window.todoApi.onTodosUpdated((todos) => {
-          renderer.renderTasks(todos, state.focusedElement !== null, state);
-        });
-
-        window.todoApi.onSettingsUpdated((settings) => {
-          if (settings.todoHotkeys) {
-            state.todoHotkeys = settings.todoHotkeys;
-          }
-        });
+        window.todoApi.onTodosUpdated(todos => renderer.renderTasks(todos, state.focusedElement !== null, state));
+        window.todoApi.onSettingsUpdated(s => { if (s.todoHotkeys) state.todoHotkeys = s.todoHotkeys; });
       }
-      
-      window.loadLargeDemo = async function() {
-        if (window.todoApi) {
-          await window.todoApi.loadLargeDemo();
-          renderer.renderTasks(await window.todoApi.getTodos(), false, state);
-        }
-      };
     </script>
   </body>
 </html>

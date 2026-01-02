@@ -114,10 +114,46 @@ function focusTask(taskId, state) {
   }, 100);
 }
 
-function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
-  const innerContainer = container.id === 'todo-container-inner' ? container : container.querySelector('#todo-container-inner');
-  const targetContainer = innerContainer || container;
+function positionTaskInDom(task, taskEl, targetContainer, todos) {
+  const svg = targetContainer.querySelector('#hierarchy-svg');
   
+  if (task.parentId) {
+    const parentEl = targetContainer.querySelector(`[data-task-id="${task.parentId}"]`);
+    if (!parentEl) return;
+
+    const siblings = todos.filter(t => t.parentId === task.parentId && t.id !== task.id);
+    const predecessors = siblings.filter(t => t.order < task.order);
+    
+    let anchorEl = parentEl;
+    if (predecessors.length > 0) {
+      const lastPred = predecessors.sort((a,b) => b.order - a.order)[0];
+      const lastPredDesc = hierarchy.getLastVisibleDescendant(lastPred, todos);
+      const lastPredEl = targetContainer.querySelector(`[data-task-id="${lastPredDesc.id}"]`);
+      if (lastPredEl) anchorEl = lastPredEl;
+    }
+    
+    if (taskEl.previousElementSibling !== anchorEl) anchorEl.after(taskEl);
+  } else {
+    const rootTasks = todos.filter(t => !t.parentId && t.id !== task.id).sort((a,b) => a.order - b.order);
+    const predecessors = rootTasks.filter(t => t.order < task.order);
+    
+    if (predecessors.length > 0) {
+      const lastPred = predecessors[predecessors.length - 1];
+      const lastPredDesc = hierarchy.getLastVisibleDescendant(lastPred, todos);
+      const lastPredEl = targetContainer.querySelector(`[data-task-id="${lastPredDesc.id}"]`);
+      if (lastPredEl && taskEl.previousElementSibling !== lastPredEl) lastPredEl.after(taskEl);
+    } else {
+      const firstChild = svg ? svg.nextSibling : targetContainer.firstChild;
+      if (taskEl !== firstChild) {
+        if (svg) svg.after(taskEl);
+        else targetContainer.insertBefore(taskEl, targetContainer.firstChild);
+      }
+    }
+  }
+}
+
+function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
+  const targetContainer = container.id === 'todo-container-inner' ? container : container.querySelector('#todo-container-inner') || container;
   let taskEl = targetContainer.querySelector(`[data-task-id="${task.id}"]`);
   const isNew = !taskEl;
   
@@ -128,144 +164,46 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
     
     dragDrop.setupDragDrop(taskEl, task, todos, state, refreshTodos);
     
-    const expanderEl = createTaskExpander(task, todos, state, renderTasks);
-    
     const contentEl = document.createElement('div');
     contentEl.className = 'task-content';
     contentEl.contentEditable = 'true';
     contentEl.spellcheck = false;
-    contentEl.innerHTML = task.content || '';
     
-    contentEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-      activateTask(taskEl, task.id, state);
-    });
+    contentEl.addEventListener('click', (e) => { e.stopPropagation(); activateTask(taskEl, task.id, state); });
+    contentEl.addEventListener('focus', () => activateTask(taskEl, task.id, state));
     
-    contentEl.addEventListener('focus', () => {
-      activateTask(taskEl, task.id, state);
-    });
-    
-    const actionsEl = createTaskActions(task.id, state, refreshTodos, focusTask);
-    
-    taskEl.appendChild(expanderEl);
+    taskEl.appendChild(createTaskExpander(task, todos, state, renderTasks));
     taskEl.appendChild(contentEl);
-    taskEl.appendChild(actionsEl);
+    taskEl.appendChild(createTaskActions(task.id, state, refreshTodos, focusTask));
   }
 
-  // Positioning logic for flat DOM
-  const svg = targetContainer.querySelector('#hierarchy-svg');
-  
-  if (task.parentId) {
-    const parentEl = targetContainer.querySelector(`[data-task-id="${task.parentId}"]`);
-    if (parentEl) {
-      const siblingTasks = todos.filter(t => t.parentId === task.parentId && t.id !== task.id);
-      const predecessors = siblingTasks.filter(t => t.order < task.order);
-      
-      let anchorEl = parentEl;
-      if (predecessors.length > 0) {
-        const lastPred = predecessors.sort((a,b) => b.order - a.order)[0];
-        const lastPredDesc = hierarchy.getLastVisibleDescendant(lastPred, todos);
-        const lastPredEl = targetContainer.querySelector(`[data-task-id="${lastPredDesc.id}"]`);
-        if (lastPredEl) anchorEl = lastPredEl;
-      }
-      
-      if (taskEl.previousElementSibling !== anchorEl) {
-        anchorEl.after(taskEl);
-      }
-    }
-  } else {
-    // Root task positioning
-    const rootTasks = todos.filter(t => !t.parentId && t.id !== task.id).sort((a,b) => a.order - b.order);
-    const predecessors = rootTasks.filter(t => t.order < task.order);
-    
-    if (predecessors.length > 0) {
-      const lastPred = predecessors[predecessors.length - 1];
-      const lastPredDesc = hierarchy.getLastVisibleDescendant(lastPred, todos);
-      const lastPredEl = targetContainer.querySelector(`[data-task-id="${lastPredDesc.id}"]`);
-      if (lastPredEl && taskEl.previousElementSibling !== lastPredEl) {
-        lastPredEl.after(taskEl);
-      }
-    } else {
-      // First root task - should be after SVG if it exists, or at start
-      if (svg) {
-        if (taskEl.previousElementSibling !== svg) {
-          svg.after(taskEl);
-        }
-      } else if (targetContainer.firstChild) {
-        if (taskEl !== targetContainer.firstChild) {
-          targetContainer.insertBefore(taskEl, targetContainer.firstChild);
-        }
-      } else {
-        targetContainer.appendChild(taskEl);
-      }
-    }
-  }
+  taskEl.querySelector('.task-content').innerHTML = task.content || '';
+  positionTaskInDom(task, taskEl, targetContainer, todos);
 
   if (isNew) {
-    const contentEl = taskEl.querySelector('.task-content');
-    richEditor.setupRichEditor(contentEl, task.id, state, (todos) => hierarchyLines.drawHierarchyLines(todos, targetContainer));
+    richEditor.setupRichEditor(taskEl.querySelector('.task-content'), task.id, state, (ts) => hierarchyLines.drawHierarchyLines(ts, targetContainer));
     requestAnimationFrame(() => {
-      richEditor.autoResize(contentEl);
-      setTimeout(() => {
-        if (state.currentTodos) hierarchyLines.drawHierarchyLines(state.currentTodos, targetContainer);
-      }, 0);
+      richEditor.autoResize(taskEl.querySelector('.task-content'));
+      if (state.currentTodos) hierarchyLines.drawHierarchyLines(state.currentTodos, targetContainer);
     });
   } else {
-    if (!taskEl.hasAttribute('draggable')) {
-      dragDrop.setupDragDrop(taskEl, task, todos, state, refreshTodos);
-    }
-    const contentEl = taskEl.querySelector('.task-content');
-    if (contentEl && contentEl !== state.focusedElement) {
-      if (contentEl.contentEditable === 'true') {
-        contentEl.spellcheck = false;
-      }
-      contentEl.innerHTML = task.content || '';
-      requestAnimationFrame(() => {
-        richEditor.autoResize(contentEl);
-      });
-    }
-    let expanderEl = taskEl.querySelector('.task-expander');
-    if (!expanderEl) {
-      expanderEl = createTaskExpander(task, todos, state, renderTasks);
-      const contentEl = taskEl.querySelector('.task-content');
-      if (contentEl) {
-        taskEl.insertBefore(expanderEl, contentEl);
-      }
-    } else {
-      expanderEl.style.marginLeft = `${8 + hierarchy.calculateLevel(task, todos) * 9}px`;
-      const iconEl = expanderEl.querySelector('.task-expander-icon');
-      if (iconEl) {
-        updateExpanderIcon(iconEl, task, todos);
-      }
-    }
-    let actionsEl = taskEl.querySelector('.task-actions');
-    if (!actionsEl) {
-      actionsEl = createTaskActions(task.id, state, refreshTodos, focusTask);
-      taskEl.appendChild(actionsEl);
-    }
-    if (contentEl && !contentEl.hasAttribute('data-click-handler')) {
-      contentEl.setAttribute('data-click-handler', 'true');
-      contentEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        activateTask(taskEl, task.id, state);
-      });
-    }
-    if (state.activeTaskId === task.id) {
-      taskEl.classList.add('active');
-    }
+    if (!taskEl.hasAttribute('draggable')) dragDrop.setupDragDrop(taskEl, task, todos, state, refreshTodos);
+    updateExpanderIcon(taskEl.querySelector('.task-expander-icon'), task, todos);
+    const expander = taskEl.querySelector('.task-expander');
+    if (expander) expander.style.marginLeft = `${8 + hierarchy.calculateLevel(task, todos) * 9}px`;
+    if (state.activeTaskId === task.id) taskEl.classList.add('active');
   }
   
   if (!task.collapsed) {
     todos.filter(t => t.parentId === task.id && !t.completed && hierarchy.isTaskVisible(t, todos))
       .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .forEach(child => renderTask(child, todos, container, state, refreshTodos, renderTasks));
+      .forEach(child => renderTask(child, todos, targetContainer, state, refreshTodos, renderTasks));
   }
 }
 
 function renderTasks(todos, preserveExisting, state) {
   state.currentTodos = todos;
-  const outerContainer = document.getElementById('todo-container');
-  const container = document.getElementById('todo-container-inner') || outerContainer;
+  const container = document.getElementById('todo-container-inner') || document.getElementById('todo-container');
   if (!container) return;
   
   if (!preserveExisting) {
@@ -275,7 +213,7 @@ function renderTasks(todos, preserveExisting, state) {
     state.activeTaskId = null;
   } else {
     const currentIds = new Set(todos.filter(t => !t.completed).map(t => t.id));
-    container.querySelectorAll('[data-task-id]').forEach(el => {
+    container.querySelectorAll('.task').forEach(el => {
       if (!currentIds.has(el.dataset.taskId)) {
         el.remove();
         if (state.activeTaskId === el.dataset.taskId) state.activeTaskId = null;
@@ -288,9 +226,7 @@ function renderTasks(todos, preserveExisting, state) {
     .forEach(task => renderTask(task, todos, container, state, refreshTodos, renderTasks));
   
   requestAnimationFrame(() => {
-    container.querySelectorAll('.task-content').forEach(el => {
-      if (el !== state.focusedElement) richEditor.autoResize(el);
-    });
+    container.querySelectorAll('.task-content').forEach(el => { if (el !== state.focusedElement) richEditor.autoResize(el); });
     setTimeout(() => hierarchyLines.drawHierarchyLines(todos, container), 50);
   });
 }
