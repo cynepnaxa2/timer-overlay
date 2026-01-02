@@ -92,12 +92,21 @@ describe('todoStore', () => {
       expect(todo).toHaveProperty('id');
       expect(todo.content).toBe('Test content');
       expect(todo.parentId).toBeNull();
+      expect(todo.type).toBe('task');
       expect(todo.completed).toBe(false);
       expect(todo.completedAt).toBeNull();
       expect(todo.order).toBe(0);
       expect(todo.createdAt).toBeGreaterThan(0);
       expect(todo.motivationWord).toBeNull();
       expect(todo.collapsed).toBe(false);
+      expect(todo.economics).toEqual({
+        cost: 0,
+        gain: 0,
+        roi: 0
+      });
+      expect(todo.context).toEqual([]);
+      expect(todo.metadata).toEqual({});
+      expect(todo.isArchived).toBe(false);
     });
 
     test('creates todo with parentId', () => {
@@ -166,6 +175,24 @@ describe('todoStore', () => {
       const todos = todoStore.readTodos();
       expect(todos[0].collapsed).toBe(true);
     });
+
+    test('calculates ROI on economics update', () => {
+      const todo = todoStore.createTodo('Test');
+      const updated = todoStore.updateTodo(todo.id, { 
+        economics: { cost: 10, gain: 50 } 
+      });
+      
+      expect(updated.economics.roi).toBe(5);
+    });
+
+    test('handles zero cost in ROI calculation', () => {
+      const todo = todoStore.createTodo('Test');
+      const updated = todoStore.updateTodo(todo.id, { 
+        economics: { cost: 0, gain: 50 } 
+      });
+      
+      expect(updated.economics.roi).toBe(50);
+    });
   });
 
   describe('deleteTodo', () => {
@@ -181,6 +208,7 @@ describe('todoStore', () => {
       const parent = todoStore.createTodo('Parent');
       const child1 = todoStore.createTodo('Child1', parent.id);
       const child2 = todoStore.createTodo('Child2', parent.id);
+      const grandchild = todoStore.createTodo('Grandchild', child1.id);
       const other = todoStore.createTodo('Other');
       
       todoStore.deleteTodo(parent.id);

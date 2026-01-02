@@ -51,12 +51,21 @@ function createTodo(content, parentId = null) {
     id: randomUUID(),
     content: content || '',
     parentId: parentId,
+    type: 'task', // New field: task, step, variant
     completed: false,
     completedAt: null,
     order: maxOrder + 1,
     createdAt: Date.now(),
     motivationWord: null,
-    collapsed: false
+    collapsed: false,
+    economics: {
+      cost: 0,
+      gain: 0,
+      roi: 0
+    },
+    context: [], // Tags
+    metadata: {}, // AI-generated data
+    isArchived: false
   };
   
   todos.push(newTodo);
@@ -71,14 +80,36 @@ function updateTodo(id, updates) {
     return null;
   }
   
-  todos[index] = { ...todos[index], ...updates };
+  const updated = { ...todos[index], ...updates };
+  
+  // Recalculate ROI if economics changed
+  if (updates.economics) {
+    const cost = updated.economics.cost || 0;
+    const gain = updated.economics.gain || 0;
+    updated.economics.roi = cost > 0 ? gain / cost : gain;
+  }
+
+  todos[index] = updated;
   writeTodos(todos);
   return todos[index];
 }
 
 function deleteTodo(id) {
   const todos = readTodos();
-  const filtered = todos.filter(t => t.id !== id && t.parentId !== id);
+  const toDelete = new Set();
+  
+  function collectIds(targetId) {
+    toDelete.add(targetId);
+    todos.forEach(t => {
+      if (t.parentId === targetId) {
+        collectIds(t.id);
+      }
+    });
+  }
+  
+  collectIds(id);
+  
+  const filtered = todos.filter(t => !toDelete.has(t.id));
   writeTodos(filtered);
   return filtered;
 }

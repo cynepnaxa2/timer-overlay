@@ -6,7 +6,7 @@ const { buildOverlayCssVariables } = require('./src/utils/style');
 const { createTrayIcon } = require('./src/utils/trayIcon');
 const { getMode, getAllModes } = require('./src/config/modes');
 const { updateCounter, getFormattedCounter, resetDisplayCounters } = require('./src/utils/counters');
-const { readTodos, createTodo, updateTodo, deleteTodo, reorderTodos, loadTodosFromFile, ensureDemoTodos } = require('./src/store/todoStore');
+const todoService = require('./src/services/todoService');
 
 let mainWindow = null;
 let settingsWindow = null;
@@ -227,7 +227,7 @@ function createTodoWindow() {
     }
   });
   todoWindow.once('ready-to-show', async () => {
-    ensureDemoTodos();
+    todoService.ensureDemo();
     todoWindow.maximize();
     todoWindow.show();
     
@@ -460,35 +460,35 @@ function registerIpc() {
   });
   
   ipcMain.handle('get-todos', () => {
-    return readTodos();
+    return todoService.getTodos();
   });
   
   function notifyTodosUpdated() {
     if (todoWindow && !todoWindow.isDestroyed()) {
-      todoWindow.webContents.send('todos-updated', readTodos());
+      todoWindow.webContents.send('todos-updated', todoService.getTodos());
     }
   }
   
   ipcMain.handle('create-todo', (_event, content, parentId) => {
-    const todo = createTodo(content, parentId);
+    const todo = todoService.createTodo(content, parentId);
     notifyTodosUpdated();
     return todo;
   });
   
   ipcMain.handle('update-todo', (_event, id, updates) => {
-    const todo = updateTodo(id, updates);
+    const todo = todoService.updateTodo(id, updates);
     notifyTodosUpdated();
     return todo;
   });
   
   ipcMain.handle('delete-todo', (_event, id) => {
-    deleteTodo(id);
+    todoService.deleteTodo(id);
     notifyTodosUpdated();
     return true;
   });
   
   ipcMain.handle('reorder-todos', (_event, todoIds) => {
-    const todos = reorderTodos(todoIds);
+    const todos = todoService.reorderTodos(todoIds);
     if (todoWindow && !todoWindow.isDestroyed()) {
       todoWindow.webContents.send('todos-updated', todos);
     }
@@ -496,10 +496,7 @@ function registerIpc() {
   });
   
   ipcMain.handle('toggle-task-collapse', (_event, taskId) => {
-    const todos = readTodos();
-    const task = todos.find(t => t.id === taskId);
-    if (!task) return null;
-    const updated = updateTodo(taskId, { collapsed: !task.collapsed });
+    const updated = todoService.toggleCollapse(taskId);
     notifyTodosUpdated();
     return updated;
   });
@@ -533,7 +530,7 @@ function registerIpc() {
     }
     
     const filePath = result.filePaths[0];
-    const success = loadTodosFromFile(filePath);
+    const success = todoService.loadFromFile(filePath);
     if (success) {
       notifyTodosUpdated();
     }
@@ -542,11 +539,11 @@ function registerIpc() {
   
   ipcMain.handle('load-demo-todos', () => {
     const demoPath = path.join(__dirname, 'demo-todos.json');
-    const success = loadTodosFromFile(demoPath);
+    const success = todoService.loadFromFile(demoPath);
     if (success) {
       notifyTodosUpdated();
     } else {
-      ensureDemoTodos();
+      todoService.ensureDemo();
       notifyTodosUpdated();
     }
     return success || true;
@@ -554,7 +551,7 @@ function registerIpc() {
   
   ipcMain.handle('load-large-demo', () => {
     const demoPath = path.join(__dirname, 'demo-todos-large.json');
-    const success = loadTodosFromFile(demoPath);
+    const success = todoService.loadFromFile(demoPath);
     if (success) {
       notifyTodosUpdated();
     }
