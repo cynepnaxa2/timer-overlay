@@ -573,11 +573,7 @@ function registerIpc() {
   
   ipcMain.handle('get-todo-hotkeys', () => {
     if (!currentSettings) currentSettings = readSettings();
-    return currentSettings.todoHotkeys || {
-      addSubtask: 'Insert',
-      execute: 'F5',
-      complete: 'Delete'
-    };
+    return currentSettings.todoHotkeys;
   });
   
   ipcMain.handle('set-todo-hotkeys', (_event, hotkeys) => {
@@ -677,10 +673,13 @@ function registerIpc() {
       }
     }
     
-    // Notify settings window that update succeeded
+    // Notify windows that update succeeded
     if (settingsWindow && !settingsWindow.isDestroyed()) {
       settingsWindow.webContents.send('settings-updated');
       settingsWindow.webContents.send('counters-updated', currentSettings.counters);
+    }
+    if (todoWindow && !todoWindow.isDestroyed()) {
+      todoWindow.webContents.send('settings-updated', currentSettings);
     }
   });
 }

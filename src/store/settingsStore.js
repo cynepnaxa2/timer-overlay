@@ -22,8 +22,9 @@ const DEFAULT_SETTINGS = {
   },
   resetHotkey: 'Ctrl+Shift+R', // Горячая клавиша для сброса счетчиков
   todoHotkeys: {
-    addSubtask: 'Insert',
-    execute: 'F5',
+    addSubtask: 'Ctrl+Enter',
+    addRootTask: 'Shift+Enter',
+    execute: 'Ctrl+Space',
     complete: 'Delete'
   }
 };

@@ -73,6 +73,10 @@
         border-radius: 4px;
         font-size: 13px;
       }
+      input.hotkey-input {
+        width: 100%;
+        max-width: 200px;
+      }
       input[type="number"]:focus, input[type="text"]:focus {
         outline: none;
         border-color: #0078d4;
@@ -367,11 +371,32 @@
         <div class="section-title">Горячие клавиши</div>
         
         <div class="row">
-          <label for="resetHotkey">Сброс счетчиков:</label>
-          <input id="resetHotkey" type="text" placeholder="Ctrl+Shift+R" style="width: 200px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
-          <div style="font-size: 11px; color: #666; margin-top: 4px;">
-            Нажмите комбинацию клавиш для установки. Формат: Ctrl+Shift+R, Alt+F1 и т.д.
-          </div>
+          <label for="resetHotkey">Сброс счетчиков (оверлей):</label>
+          <input id="resetHotkey" type="text" class="hotkey-input" placeholder="Ctrl+Shift+R">
+        </div>
+
+        <div class="row">
+          <label for="addSubtaskHotkey">Создать подзадачу:</label>
+          <input id="addSubtaskHotkey" type="text" class="hotkey-input" placeholder="Ctrl+Enter">
+        </div>
+
+        <div class="row">
+          <label for="addRootTaskHotkey">Создать корневую задачу:</label>
+          <input id="addRootTaskHotkey" type="text" class="hotkey-input" placeholder="Shift+Enter">
+        </div>
+
+        <div class="row">
+          <label for="executeHotkey">Запустить таймер задачи:</label>
+          <input id="executeHotkey" type="text" class="hotkey-input" placeholder="Ctrl+Space">
+        </div>
+
+        <div class="row">
+          <label for="completeHotkey">Завершить задачу:</label>
+          <input id="completeHotkey" type="text" class="hotkey-input" placeholder="Delete">
+        </div>
+
+        <div style="font-size: 11px; color: #666; margin-top: 4px;">
+          Нажмите комбинацию клавиш в поле для установки.
         </div>
       </div>
 
@@ -530,6 +555,13 @@
         $('mode').value = values.mode || 'money';
         $('resetHotkey').value = values.resetHotkey || 'Ctrl+Shift+R';
         
+        if (values.todoHotkeys) {
+          $('addSubtaskHotkey').value = values.todoHotkeys.addSubtask || 'Ctrl+Enter';
+          $('addRootTaskHotkey').value = values.todoHotkeys.addRootTask || 'Shift+Enter';
+          $('executeHotkey').value = values.todoHotkeys.execute || 'Ctrl+Space';
+          $('completeHotkey').value = values.todoHotkeys.complete || 'Delete';
+        }
+        
         // Уровень
         const level = values.level || 1;
         $(`level${level}`).checked = true;
@@ -562,6 +594,13 @@
         values.mode = $('mode').value;
         values.resetHotkey = $('resetHotkey').value || 'Ctrl+Shift+R';
         
+        // Todo Hotkeys
+        if (!values.todoHotkeys) values.todoHotkeys = {};
+        values.todoHotkeys.addSubtask = $('addSubtaskHotkey').value || 'Ctrl+Enter';
+        values.todoHotkeys.addRootTask = $('addRootTaskHotkey').value || 'Shift+Enter';
+        values.todoHotkeys.execute = $('executeHotkey').value || 'Ctrl+Space';
+        values.todoHotkeys.complete = $('completeHotkey').value || 'Delete';
+
         // Уровень
         const levelRadio = document.querySelector('input[name="level"]:checked');
         if (levelRadio) {
@@ -666,51 +705,57 @@
         });
       });
       
-      // Обработчик для горячей клавиши сброса
-      $('resetHotkey').addEventListener('keydown', (e) => {
-        e.preventDefault();
-        const parts = [];
-        if (e.ctrlKey) parts.push('Ctrl');
-        if (e.altKey) parts.push('Alt');
-        if (e.shiftKey) parts.push('Shift');
-        if (e.metaKey) parts.push('Meta');
-        
-        // Добавляем основную клавишу (исключаем модификаторы)
-        if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
-          let key = e.key;
-          if (key.length === 1) {
-            key = key.toUpperCase();
-          } else if (key.startsWith('Key')) {
-            key = key.substring(3);
-          } else if (key.startsWith('Digit')) {
-            key = key.substring(5);
-          } else {
-            // Специальные клавиши
-            const keyMap = {
-              'Escape': 'Esc',
-              'Enter': 'Enter',
-              'Space': 'Space',
-              'Backspace': 'Backspace',
-              'Delete': 'Delete',
-              'ArrowUp': 'Up',
-              'ArrowDown': 'Down',
-              'ArrowLeft': 'Left',
-              'ArrowRight': 'Right',
-              'F1': 'F1', 'F2': 'F2', 'F3': 'F3', 'F4': 'F4',
-              'F5': 'F5', 'F6': 'F6', 'F7': 'F7', 'F8': 'F8',
-              'F9': 'F9', 'F10': 'F10', 'F11': 'F11', 'F12': 'F12'
-            };
-            key = keyMap[key] || key;
+      // Обработчик для записи горячих клавиш
+      function setupHotkeyRecording(id) {
+        $(id).addEventListener('keydown', (e) => {
+          e.preventDefault();
+          const parts = [];
+          if (e.ctrlKey) parts.push('Ctrl');
+          if (e.altKey) parts.push('Alt');
+          if (e.shiftKey) parts.push('Shift');
+          if (e.metaKey) parts.push('Meta');
+          
+          if (!['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+            let key = e.key;
+            if (key.length === 1) {
+              key = key.toUpperCase();
+            } else {
+              const keyMap = {
+                'Escape': 'Esc',
+                'Enter': 'Enter',
+                'Space': 'Space',
+                'Backspace': 'Backspace',
+                'Delete': 'Delete',
+                'ArrowUp': 'Up',
+                'ArrowDown': 'Down',
+                'ArrowLeft': 'Left',
+                'ArrowRight': 'Right',
+                'Insert': 'Insert',
+                'PageUp': 'PageUp',
+                'PageDown': 'PageDown',
+                'Home': 'Home',
+                'End': 'End',
+                'F1': 'F1', 'F2': 'F2', 'F3': 'F3', 'F4': 'F4',
+                'F5': 'F5', 'F6': 'F6', 'F7': 'F7', 'F8': 'F8',
+                'F9': 'F9', 'F10': 'F10', 'F11': 'F11', 'F12': 'F12'
+              };
+              key = keyMap[key] || key;
+            }
+            parts.push(key);
           }
-          parts.push(key);
-        }
-        
-        if (parts.length > 0) {
-          $('resetHotkey').value = parts.join('+');
-          readUI();
-          syncUI();
-        }
-      });
+          
+          if (parts.length > 0) {
+            $(id).value = parts.join('+');
+            applySettings();
+          }
+        });
+      }
+
+      setupHotkeyRecording('resetHotkey');
+      setupHotkeyRecording('addSubtaskHotkey');
+      setupHotkeyRecording('addRootTaskHotkey');
+      setupHotkeyRecording('executeHotkey');
+      setupHotkeyRecording('completeHotkey');
 
       $('close').addEventListener('click', () => window.close());
       

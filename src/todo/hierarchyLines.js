@@ -15,7 +15,6 @@ function drawHierarchyLines(todos, container) {
   const containerRect = container.getBoundingClientRect();
   const scrollTop = container.scrollTop;
   const svgHeight = Math.max(container.scrollHeight, containerRect.height);
-  const svgRect = svg.getBoundingClientRect();
   
   svg.setAttribute('width', containerRect.width);
   svg.setAttribute('height', svgHeight);
@@ -30,8 +29,17 @@ function drawHierarchyLines(todos, container) {
     overflow: 'visible'
   });
   
-  const getY = (el) => el ? el.getBoundingClientRect().bottom - svgRect.top + scrollTop : 0;
-  const getX = (el) => el ? el.getBoundingClientRect().left - svgRect.left : 0;
+  // Use relative coordinates within the absolute-positioned SVG
+  const getY = (el) => {
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    return rect.bottom - containerRect.top + container.scrollTop;
+  };
+  const getX = (el) => {
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    return rect.left - containerRect.left;
+  };
   
   const parentTasks = todos.filter(t => 
     !t.completed && 

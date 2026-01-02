@@ -53,31 +53,47 @@ function matchesHotkey(event, hotkeyString) {
 
 function setupHotkeys(state, refreshTodos, focusTask) {
   document.addEventListener('keydown', (e) => {
+    let currentTaskId = state.activeTaskId;
+    
+    if (document.activeElement && document.activeElement.classList.contains('task-content')) {
+      const taskEl = document.activeElement.closest('.task');
+      if (taskEl && taskEl.dataset.taskId) {
+        currentTaskId = taskEl.dataset.taskId;
+        state.activeTaskId = currentTaskId;
+      }
+    }
+
     if (state.focusedElement && document.activeElement === state.focusedElement) {
+      if (matchesHotkey(e, state.todoHotkeys.addSubtask)) {
+        e.preventDefault();
+        window.todoRenderer.createAndFocusTask(currentTaskId, state, refreshTodos);
+        return;
+      }
       return;
     }
     
-    if (!state.activeTaskId) return;
+    // Global hotkeys (no active task required)
+    if (matchesHotkey(e, state.todoHotkeys.addRootTask)) {
+      e.preventDefault();
+      window.todoRenderer.createAndFocusTask(null, state, refreshTodos);
+      return;
+    }
+
+    if (!currentTaskId) return;
     
     if (matchesHotkey(e, state.todoHotkeys.addSubtask)) {
       e.preventDefault();
-      if (window.todoApi) {
-        window.todoApi.createTodo('', state.activeTaskId).then(newTask => {
-          refreshTodos().then(() => {
-            if (newTask) focusTask(newTask.id);
-          });
-        });
-      }
+      window.todoRenderer.createAndFocusTask(currentTaskId, state, refreshTodos);
     } else if (matchesHotkey(e, state.todoHotkeys.execute)) {
       e.preventDefault();
-      const task = state.currentTodos.find(t => t.id === state.activeTaskId);
+      const task = state.currentTodos.find(t => t.id === currentTaskId);
       if (window.todoApi && task) {
         window.todoApi.startTimer(task.motivationWord || null);
       }
     } else if (matchesHotkey(e, state.todoHotkeys.complete)) {
       e.preventDefault();
       if (window.todoApi) {
-        window.todoApi.updateTodo(state.activeTaskId, { completed: true, completedAt: Date.now() }).then(() => refreshTodos());
+        window.todoApi.updateTodo(currentTaskId, { completed: true, completedAt: Date.now() }).then(() => refreshTodos(state));
       }
     }
   });

@@ -65,9 +65,7 @@ function createTaskActions(taskId, state, refreshTodos, focusTask) {
   
   const buttons = [
     { text: '+', title: 'Добавить подзадачу', action: async () => {
-      const newTask = await window.todoApi.createTodo('', taskId);
-      await refreshTodos();
-      if (newTask) focusTask(newTask.id, state);
+      await createAndFocusTask(taskId, state, refreshTodos);
     }},
     { text: '▶', title: 'Выполнить', action: () => {
       const task = state.currentTodos.find(t => t.id === taskId);
@@ -117,9 +115,13 @@ function focusTask(taskId, state) {
 }
 
 function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
-  let taskEl = container.querySelector(`[data-task-id="${task.id}"]`);
+  const innerContainer = container.id === 'todo-container-inner' ? container : container.querySelector('#todo-container-inner');
+  const targetContainer = innerContainer || container;
   
-  if (!taskEl) {
+  let taskEl = targetContainer.querySelector(`[data-task-id="${task.id}"]`);
+  const isNew = !taskEl;
+  
+  if (isNew) {
     taskEl = document.createElement('div');
     taskEl.className = 'task';
     taskEl.dataset.taskId = task.id;
@@ -134,9 +136,12 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
     contentEl.spellcheck = false;
     contentEl.innerHTML = task.content || '';
     
-    contentEl.setAttribute('data-click-handler', 'true');
     contentEl.addEventListener('click', (e) => {
       e.stopPropagation();
+      activateTask(taskEl, task.id, state);
+    });
+    
+    contentEl.addEventListener('focus', () => {
       activateTask(taskEl, task.id, state);
     });
     
@@ -145,13 +150,64 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
     taskEl.appendChild(expanderEl);
     taskEl.appendChild(contentEl);
     taskEl.appendChild(actionsEl);
-    container.appendChild(taskEl);
+  }
+
+  // Positioning logic for flat DOM
+  const svg = targetContainer.querySelector('#hierarchy-svg');
+  
+  if (task.parentId) {
+    const parentEl = targetContainer.querySelector(`[data-task-id="${task.parentId}"]`);
+    if (parentEl) {
+      const siblingTasks = todos.filter(t => t.parentId === task.parentId && t.id !== task.id);
+      const predecessors = siblingTasks.filter(t => t.order < task.order);
+      
+      let anchorEl = parentEl;
+      if (predecessors.length > 0) {
+        const lastPred = predecessors.sort((a,b) => b.order - a.order)[0];
+        const lastPredDesc = hierarchy.getLastVisibleDescendant(lastPred, todos);
+        const lastPredEl = targetContainer.querySelector(`[data-task-id="${lastPredDesc.id}"]`);
+        if (lastPredEl) anchorEl = lastPredEl;
+      }
+      
+      if (taskEl.previousElementSibling !== anchorEl) {
+        anchorEl.after(taskEl);
+      }
+    }
+  } else {
+    // Root task positioning
+    const rootTasks = todos.filter(t => !t.parentId && t.id !== task.id).sort((a,b) => a.order - b.order);
+    const predecessors = rootTasks.filter(t => t.order < task.order);
     
-    richEditor.setupRichEditor(contentEl, task.id, state, hierarchyLines.drawHierarchyLines);
+    if (predecessors.length > 0) {
+      const lastPred = predecessors[predecessors.length - 1];
+      const lastPredDesc = hierarchy.getLastVisibleDescendant(lastPred, todos);
+      const lastPredEl = targetContainer.querySelector(`[data-task-id="${lastPredDesc.id}"]`);
+      if (lastPredEl && taskEl.previousElementSibling !== lastPredEl) {
+        lastPredEl.after(taskEl);
+      }
+    } else {
+      // First root task - should be after SVG if it exists, or at start
+      if (svg) {
+        if (taskEl.previousElementSibling !== svg) {
+          svg.after(taskEl);
+        }
+      } else if (targetContainer.firstChild) {
+        if (taskEl !== targetContainer.firstChild) {
+          targetContainer.insertBefore(taskEl, targetContainer.firstChild);
+        }
+      } else {
+        targetContainer.appendChild(taskEl);
+      }
+    }
+  }
+
+  if (isNew) {
+    const contentEl = taskEl.querySelector('.task-content');
+    richEditor.setupRichEditor(contentEl, task.id, state, (todos) => hierarchyLines.drawHierarchyLines(todos, targetContainer));
     requestAnimationFrame(() => {
       richEditor.autoResize(contentEl);
       setTimeout(() => {
-        if (state.currentTodos) hierarchyLines.drawHierarchyLines(state.currentTodos, container);
+        if (state.currentTodos) hierarchyLines.drawHierarchyLines(state.currentTodos, targetContainer);
       }, 0);
     });
   } else {
@@ -208,7 +264,8 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
 
 function renderTasks(todos, preserveExisting, state) {
   state.currentTodos = todos;
-  const container = document.getElementById('todo-container');
+  const outerContainer = document.getElementById('todo-container');
+  const container = document.getElementById('todo-container-inner') || outerContainer;
   if (!container) return;
   
   if (!preserveExisting) {
@@ -243,6 +300,14 @@ async function refreshTodos(state) {
   renderTasks(todos, true, state);
 }
 
+async function createAndFocusTask(parentId, state, refreshTodos) {
+  if (!window.todoApi) return;
+  const newTask = await window.todoApi.createTodo('', parentId || null);
+  await refreshTodos(state);
+  if (newTask) focusTask(newTask.id, state);
+  return newTask;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     renderTasks,
@@ -251,7 +316,8 @@ if (typeof module !== 'undefined' && module.exports) {
     createTaskActions,
     focusTask,
     refreshTodos,
-    updateExpanderIcon
+    updateExpanderIcon,
+    createAndFocusTask
   };
 } else {
   window.todoRenderer = {
@@ -261,6 +327,7 @@ if (typeof module !== 'undefined' && module.exports) {
     createTaskActions,
     focusTask,
     refreshTodos,
-    updateExpanderIcon
+    updateExpanderIcon,
+    createAndFocusTask
   };
 }

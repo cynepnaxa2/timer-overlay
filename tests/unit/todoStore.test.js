@@ -120,8 +120,13 @@ describe('todoStore', () => {
       const todo1 = todoStore.createTodo('First');
       const todo2 = todoStore.createTodo('Second');
       
+      const child1 = todoStore.createTodo('Child 1', todo1.id);
+      const child2 = todoStore.createTodo('Child 2', todo1.id);
+      
       expect(todo1.order).toBe(0);
       expect(todo2.order).toBe(1);
+      expect(child1.order).toBe(0);
+      expect(child2.order).toBe(1);
     });
 
     test('saves todo to file', () => {

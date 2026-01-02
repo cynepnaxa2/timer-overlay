@@ -43,15 +43,18 @@ function writeTodos(todos) {
 
 function createTodo(content, parentId = null) {
   const todos = readTodos();
-  const maxOrder = todos.length > 0 
-    ? Math.max(...todos.map(t => t.order || 0))
+  
+  // Find siblings to determine correct order
+  const siblings = todos.filter(t => t.parentId === parentId);
+  const maxOrder = siblings.length > 0 
+    ? Math.max(...siblings.map(t => t.order || 0))
     : -1;
   
   const newTodo = {
     id: randomUUID(),
     content: content || '',
     parentId: parentId,
-    type: 'task', // New field: task, step, variant
+    type: 'task',
     completed: false,
     completedAt: null,
     order: maxOrder + 1,
@@ -63,8 +66,8 @@ function createTodo(content, parentId = null) {
       gain: 0,
       roi: 0
     },
-    context: [], // Tags
-    metadata: {}, // AI-generated data
+    context: [],
+    metadata: {},
     isArchived: false
   };
   

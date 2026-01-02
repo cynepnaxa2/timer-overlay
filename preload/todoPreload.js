@@ -16,5 +16,8 @@ contextBridge.exposeInMainWorld('todoApi', {
   setTodoHotkeys: (hotkeys) => ipcRenderer.invoke('set-todo-hotkeys', hotkeys),
   onTodosUpdated: (callback) => {
     ipcRenderer.on('todos-updated', (_event, todos) => callback(todos));
+  },
+  onSettingsUpdated: (callback) => {
+    ipcRenderer.on('settings-updated', (_event, settings) => callback(settings));
   }
 });

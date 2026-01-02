@@ -5,8 +5,9 @@ function createTodoState() {
     currentTodos: [],
     draggingTaskId: null,
     todoHotkeys: {
-      addSubtask: 'Insert',
-      execute: 'F5',
+      addSubtask: 'Ctrl+Enter',
+      addRootTask: 'Shift+Enter',
+      execute: 'Ctrl+Space',
       complete: 'Delete'
     },
     updateTimeout: null
