@@ -29,8 +29,8 @@ function updateExpanderIcon(iconEl, task, todos) {
   const parentSubtaskType = parent ? parent.subtaskType : 'list';
 
   if (!hasChildrenTasks) {
-    iconEl.textContent = parentSubtaskType === 'variants' ? '⇄' : '●';
-    iconEl.style.fontSize = parentSubtaskType === 'variants' ? '12px' : '10px';
+    iconEl.textContent = parentSubtaskType === 'variants' ? '⇄' : '☰';
+    iconEl.style.fontSize = '12px';
   } else if (task.collapsed) {
     iconEl.textContent = '▶';
     iconEl.style.fontSize = '12px';
@@ -82,6 +82,10 @@ function createTaskActions(task, state, refreshTodos, focusTask) {
     { text: '✓', title: 'Выполнено', action: async () => {
       await window.todoApi.updateTodo(taskId, { completed: true, completedAt: Date.now() });
       await refreshTodos(state);
+    }},
+    { text: '↵', title: 'Создать соседнюю задачу', action: async () => {
+      const parentId = task.parentId || null;
+      await createAndFocusTask(parentId, state, refreshTodos);
     }},
     { 
       text: task.subtaskType === 'variants' ? '☰' : '⇄', 
