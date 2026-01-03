@@ -206,7 +206,10 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
     }
   }
 
-  taskEl.querySelector('.task-content').innerHTML = task.content || '';
+  const contentEl = taskEl.querySelector('.task-content');
+  if (contentEl !== state.focusedElement) {
+    contentEl.innerHTML = task.content || '';
+  }
   positionTaskInDom(task, taskEl, targetContainer, todos);
 
   if (isNew) {
