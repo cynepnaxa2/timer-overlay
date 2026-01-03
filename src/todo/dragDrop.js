@@ -98,7 +98,7 @@ function setupDragDrop(taskEl, task, todos, state, refreshTodos) {
     }
     
     await window.todoApi.reorderTodos(todoIds);
-    await refreshTodos();
+    await refreshTodos(state);
   });
 }
 

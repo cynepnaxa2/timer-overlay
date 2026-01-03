@@ -75,7 +75,7 @@ function createTaskActions(taskId, state, refreshTodos, focusTask) {
     }},
     { text: '✓', title: 'Выполнено', action: async () => {
       await window.todoApi.updateTodo(taskId, { completed: true, completedAt: Date.now() });
-      await refreshTodos();
+      await refreshTodos(state);
     }}
   ];
   
@@ -181,6 +181,7 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
   positionTaskInDom(task, taskEl, targetContainer, todos);
 
   if (isNew) {
+    targetContainer.appendChild(taskEl);
     richEditor.setupRichEditor(taskEl.querySelector('.task-content'), task.id, state, (ts) => hierarchyLines.drawHierarchyLines(ts, targetContainer));
     requestAnimationFrame(() => {
       richEditor.autoResize(taskEl.querySelector('.task-content'));
@@ -221,9 +222,10 @@ function renderTasks(todos, preserveExisting, state) {
     });
   }
   
-  todos.filter(t => !t.parentId && !t.completed && hierarchy.isTaskVisible(t, todos))
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .forEach(task => renderTask(task, todos, container, state, refreshTodos, renderTasks));
+  const rootTasks = todos.filter(t => !t.parentId && !t.completed && hierarchy.isTaskVisible(t, todos))
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  rootTasks.forEach(task => renderTask(task, todos, container, state, refreshTodos, renderTasks));
   
   requestAnimationFrame(() => {
     container.querySelectorAll('.task-content').forEach(el => { if (el !== state.focusedElement) richEditor.autoResize(el); });
