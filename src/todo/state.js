@@ -8,7 +8,11 @@ function createTodoState() {
       addSubtask: 'Ctrl+Enter',
       addRootTask: 'Shift+Enter',
       execute: 'Ctrl+Space',
-      complete: 'Delete'
+      complete: 'Delete',
+      navNext: 'Alt+Down',
+      navPrev: 'Alt+Up',
+      navChild: 'Alt+Right',
+      navParent: 'Alt+Left'
     },
     updateTimeout: null
   };

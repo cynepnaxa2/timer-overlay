@@ -413,6 +413,26 @@
           <input id="completeHotkey" type="text" class="hotkey-input" placeholder="Delete">
         </div>
 
+        <div class="row">
+          <label for="navNextHotkey">Следующая задача:</label>
+          <input id="navNextHotkey" type="text" class="hotkey-input" placeholder="Alt+Down">
+        </div>
+
+        <div class="row">
+          <label for="navPrevHotkey">Предыдущая задача:</label>
+          <input id="navPrevHotkey" type="text" class="hotkey-input" placeholder="Alt+Up">
+        </div>
+
+        <div class="row">
+          <label for="navChildHotkey">К подзадаче:</label>
+          <input id="navChildHotkey" type="text" class="hotkey-input" placeholder="Alt+Right">
+        </div>
+
+        <div class="row">
+          <label for="navParentHotkey">К родительской задаче:</label>
+          <input id="navParentHotkey" type="text" class="hotkey-input" placeholder="Alt+Left">
+        </div>
+
         <div style="font-size: 11px; color: #666; margin-top: 4px;">
           Нажмите комбинацию клавиш в поле для установки.
         </div>
@@ -582,6 +602,10 @@
           $('addSiblingTaskHotkey').value = values.todoHotkeys.addSiblingTask || 'Enter';
           $('executeHotkey').value = values.todoHotkeys.execute || 'Ctrl+Space';
           $('completeHotkey').value = values.todoHotkeys.complete || 'Delete';
+          $('navNextHotkey').value = values.todoHotkeys.navNext || 'Alt+Down';
+          $('navPrevHotkey').value = values.todoHotkeys.navPrev || 'Alt+Up';
+          $('navChildHotkey').value = values.todoHotkeys.navChild || 'Alt+Right';
+          $('navParentHotkey').value = values.todoHotkeys.navParent || 'Alt+Left';
         }
         
         // Уровень
@@ -623,6 +647,10 @@
         values.todoHotkeys.addSiblingTask = $('addSiblingTaskHotkey').value || 'Enter';
         values.todoHotkeys.execute = $('executeHotkey').value || 'Ctrl+Space';
         values.todoHotkeys.complete = $('completeHotkey').value || 'Delete';
+        values.todoHotkeys.navNext = $('navNextHotkey').value || 'Alt+Down';
+        values.todoHotkeys.navPrev = $('navPrevHotkey').value || 'Alt+Up';
+        values.todoHotkeys.navChild = $('navChildHotkey').value || 'Alt+Right';
+        values.todoHotkeys.navParent = $('navParentHotkey').value || 'Alt+Left';
 
         // Уровень
         const levelRadio = document.querySelector('input[name="level"]:checked');
@@ -780,6 +808,10 @@
       setupHotkeyRecording('addSiblingTaskHotkey');
       setupHotkeyRecording('executeHotkey');
       setupHotkeyRecording('completeHotkey');
+      setupHotkeyRecording('navNextHotkey');
+      setupHotkeyRecording('navPrevHotkey');
+      setupHotkeyRecording('navChildHotkey');
+      setupHotkeyRecording('navParentHotkey');
 
       $('selectSyncFolder').addEventListener('click', async () => {
         try {

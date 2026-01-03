@@ -37,7 +37,11 @@ function matchesHotkey(event, hotkeyString) {
     'F5': 'F5',
     'Enter': 'Enter',
     'Space': ' ',
-    'Esc': 'Escape'
+    'Esc': 'Escape',
+    'Up': 'ArrowUp',
+    'Down': 'ArrowDown',
+    'Left': 'ArrowLeft',
+    'Right': 'ArrowRight'
   };
   
   const keyMatches = keyMap[parsed.key] ? keyMap[parsed.key] === eventKey :
@@ -83,7 +87,6 @@ function setupHotkeys(state, refreshTodos, focusTask) {
         }
         return;
       }
-      return;
     }
     
     // Global hotkeys (no active task required)
@@ -122,6 +125,54 @@ function setupHotkeys(state, refreshTodos, focusTask) {
       e.preventDefault();
       if (window.todoApi) {
         window.todoApi.updateTodo(currentTaskId, { completed: true, completedAt: Date.now() }).then(() => refreshTodos(state));
+      }
+    } else if (matchesHotkey(e, state.todoHotkeys.navNext)) {
+      e.preventDefault();
+      const current = state.currentTodos.find(t => t.id === currentTaskId);
+      if (current) {
+        const siblings = state.currentTodos.filter(t => t.parentId === current.parentId && !t.completed && window.todoHierarchy.isTaskVisible(t, state.currentTodos))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const idx = siblings.findIndex(t => t.id === current.id);
+        if (idx !== -1 && idx < siblings.length - 1) {
+          window.todoRenderer.focusTask(siblings[idx + 1].id, state);
+        }
+      }
+    } else if (matchesHotkey(e, state.todoHotkeys.navPrev)) {
+      e.preventDefault();
+      const current = state.currentTodos.find(t => t.id === currentTaskId);
+      if (current) {
+        const siblings = state.currentTodos.filter(t => t.parentId === current.parentId && !t.completed && window.todoHierarchy.isTaskVisible(t, state.currentTodos))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const idx = siblings.findIndex(t => t.id === current.id);
+        if (idx > 0) {
+          window.todoRenderer.focusTask(siblings[idx - 1].id, state);
+        }
+      }
+    } else if (matchesHotkey(e, state.todoHotkeys.navChild)) {
+      e.preventDefault();
+      const current = state.currentTodos.find(t => t.id === currentTaskId);
+      if (current) {
+        const navigateToChild = () => {
+          const children = state.currentTodos.filter(t => t.parentId === currentTaskId && !t.completed)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          if (children.length > 0) {
+            window.todoRenderer.focusTask(children[0].id, state);
+          }
+        };
+
+        if (current.collapsed) {
+          window.todoApi.toggleTaskCollapse(current.id).then(() => {
+            refreshTodos(state).then(navigateToChild);
+          });
+        } else {
+          navigateToChild();
+        }
+      }
+    } else if (matchesHotkey(e, state.todoHotkeys.navParent)) {
+      e.preventDefault();
+      const current = state.currentTodos.find(t => t.id === currentTaskId);
+      if (current && current.parentId) {
+        window.todoRenderer.focusTask(current.parentId, state);
       }
     }
   });

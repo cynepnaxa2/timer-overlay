@@ -26,7 +26,11 @@ const DEFAULT_SETTINGS = {
     addRootTask: 'Shift+Enter',
     addSiblingTask: 'Enter',
     execute: 'Ctrl+Space',
-    complete: 'Delete'
+    complete: 'Delete',
+    navNext: 'Alt+Down',
+    navPrev: 'Alt+Up',
+    navChild: 'Alt+Right',
+    navParent: 'Alt+Left'
   },
   syncFolderPath: null
 };
@@ -44,7 +48,14 @@ function readSettings() {
     }
     const raw = fs.readFileSync(file, 'utf8');
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    const settings = { ...DEFAULT_SETTINGS, ...parsed };
+    
+    // Глубокое слияние для горячих клавиш, чтобы новые клавиши добавлялись к старым настройкам
+    if (parsed.todoHotkeys) {
+      settings.todoHotkeys = { ...DEFAULT_SETTINGS.todoHotkeys, ...parsed.todoHotkeys };
+    }
+    
+    return settings;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

@@ -14,8 +14,8 @@ describe('TodoService', () => {
   });
 
   test('createTodo calls todoStore.createTodo', () => {
-    todoService.createTodo('Test content', 'parent-id');
-    expect(todoStore.createTodo).toHaveBeenCalledWith('Test content', 'parent-id');
+    todoService.createTodo('Test content', 'parent-id', 'after-id');
+    expect(todoStore.createTodo).toHaveBeenCalledWith('Test content', 'parent-id', 'after-id');
   });
 
   test('updateTodo calls todoStore.updateTodo', () => {
