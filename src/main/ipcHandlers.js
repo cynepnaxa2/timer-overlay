@@ -64,8 +64,8 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     }
   };
   
-  ipcMain.handle('create-todo', (_event, content, parentId) => {
-    const todo = todoService.createTodo(content, parentId);
+  ipcMain.handle('create-todo', (_event, content, parentId, afterId) => {
+    const todo = todoService.createTodo(content, parentId, afterId);
     notifyTodosUpdated();
     return todo;
   });

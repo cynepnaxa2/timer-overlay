@@ -52,14 +52,29 @@ function writeTodos(todos) {
   }
 }
 
-function createTodo(content, parentId = null) {
+function createTodo(content, parentId = null, afterId = null) {
   const todos = readTodos();
   
   // Find siblings to determine correct order
-  const siblings = todos.filter(t => t.parentId === parentId);
-  const maxOrder = siblings.length > 0 
-    ? Math.max(...siblings.map(t => t.order || 0))
-    : -1;
+  const siblings = todos.filter(t => t.parentId === parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+  
+  let newOrder = 0;
+  if (afterId) {
+    const afterTask = todos.find(t => t.id === afterId);
+    if (afterTask) {
+      newOrder = (afterTask.order || 0) + 1;
+      // Shift all subsequent siblings
+      todos.forEach(t => {
+        if (t.parentId === parentId && (t.order || 0) >= newOrder) {
+          t.order = (t.order || 0) + 1;
+        }
+      });
+    } else {
+      newOrder = siblings.length > 0 ? Math.max(...siblings.map(t => t.order || 0)) + 1 : 0;
+    }
+  } else {
+    newOrder = siblings.length > 0 ? Math.max(...siblings.map(t => t.order || 0)) + 1 : 0;
+  }
   
   const newTodo = {
     id: randomUUID(),
@@ -68,7 +83,7 @@ function createTodo(content, parentId = null) {
     type: 'task',
     completed: false,
     completedAt: null,
-    order: maxOrder + 1,
+    order: newOrder,
     createdAt: Date.now(),
     motivationWord: null,
     collapsed: false,

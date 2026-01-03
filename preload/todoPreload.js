@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('todoApi', {
   getTodos: () => ipcRenderer.invoke('get-todos'),
-  createTodo: (content, parentId) => ipcRenderer.invoke('create-todo', content, parentId),
+  createTodo: (content, parentId, afterId) => ipcRenderer.invoke('create-todo', content, parentId, afterId),
   updateTodo: (id, updates) => ipcRenderer.invoke('update-todo', id, updates),
   deleteTodo: (id) => ipcRenderer.invoke('delete-todo', id),
   reorderTodos: (todoIds) => ipcRenderer.invoke('reorder-todos', todoIds),

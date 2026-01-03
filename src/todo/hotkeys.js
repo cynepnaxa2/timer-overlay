@@ -71,13 +71,12 @@ function setupHotkeys(state, refreshTodos, focusTask) {
       }
       if (matchesHotkey(e, state.todoHotkeys.addSiblingTask)) {
         e.preventDefault();
-        let parentId = null;
         if (currentTaskId) {
           // Ищем задачу в актуальном списке от API, а не в потенциально устаревшем state.currentTodos
           window.todoApi.getTodos().then(todos => {
             const task = todos.find(t => t.id === currentTaskId);
-            if (task) parentId = task.parentId;
-            window.todoRenderer.createAndFocusTask(parentId, state, refreshTodos);
+            const parentId = task ? task.parentId : null;
+            window.todoRenderer.createAndFocusTask(parentId, state, refreshTodos, currentTaskId);
           });
         } else {
           window.todoRenderer.createAndFocusTask(null, state, refreshTodos);
@@ -96,12 +95,11 @@ function setupHotkeys(state, refreshTodos, focusTask) {
 
     if (matchesHotkey(e, state.todoHotkeys.addSiblingTask)) {
       e.preventDefault();
-      let parentId = null;
       if (currentTaskId) {
         window.todoApi.getTodos().then(todos => {
           const task = todos.find(t => t.id === currentTaskId);
-          if (task) parentId = task.parentId;
-          window.todoRenderer.createAndFocusTask(parentId, state, refreshTodos);
+          const parentId = task ? task.parentId : null;
+          window.todoRenderer.createAndFocusTask(parentId, state, refreshTodos, currentTaskId);
         });
       } else {
         window.todoRenderer.createAndFocusTask(null, state, refreshTodos);

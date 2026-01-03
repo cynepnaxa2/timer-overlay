@@ -129,6 +129,26 @@ describe('todoStore', () => {
       expect(child2.order).toBe(1);
     });
 
+    test('creates todo after a specific task and shifts others', () => {
+      const todo1 = todoStore.createTodo('Task 1');
+      const todo2 = todoStore.createTodo('Task 2');
+      const todo3 = todoStore.createTodo('Task 3');
+      
+      // Insert new task between 1 and 2
+      const newTodo = todoStore.createTodo('Task 1.5', null, todo1.id);
+      
+      const todos = todoStore.readTodos();
+      const t1 = todos.find(t => t.id === todo1.id);
+      const t1_5 = todos.find(t => t.id === newTodo.id);
+      const t2 = todos.find(t => t.id === todo2.id);
+      const t3 = todos.find(t => t.id === todo3.id);
+      
+      expect(t1.order).toBe(0);
+      expect(t1_5.order).toBe(1);
+      expect(t2.order).toBe(2);
+      expect(t3.order).toBe(3);
+    });
+
     test('saves todo to file', () => {
       todoStore.createTodo('Test');
       const todos = todoStore.readTodos();

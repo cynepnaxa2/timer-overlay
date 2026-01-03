@@ -85,7 +85,7 @@ function createTaskActions(task, state, refreshTodos, focusTask) {
     }},
     { text: '↵', title: 'Создать соседнюю задачу', action: async () => {
       const parentId = task.parentId || null;
-      await createAndFocusTask(parentId, state, refreshTodos);
+      await createAndFocusTask(parentId, state, refreshTodos, taskId);
     }},
     { 
       text: task.subtaskType === 'variants' ? '☰' : '⇄', 
@@ -265,9 +265,9 @@ async function refreshTodos(state) {
   renderTasks(todos, true, state);
 }
 
-async function createAndFocusTask(parentId, state, refreshTodos) {
+async function createAndFocusTask(parentId, state, refreshTodos, afterId) {
   if (!window.todoApi) return;
-  const newTask = await window.todoApi.createTodo('', parentId || null);
+  const newTask = await window.todoApi.createTodo('', parentId || null, afterId || null);
   await refreshTodos(state);
   if (newTask) focusTask(newTask.id, state);
   return newTask;

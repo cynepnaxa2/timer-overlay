@@ -5,8 +5,8 @@ const TodoService = {
     return todoStore.readTodos();
   },
 
-  createTodo(content, parentId) {
-    return todoStore.createTodo(content, parentId);
+  createTodo(content, parentId, afterId) {
+    return todoStore.createTodo(content, parentId, afterId);
   },
 
   updateTodo(id, updates) {
