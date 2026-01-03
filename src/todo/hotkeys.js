@@ -69,6 +69,16 @@ function setupHotkeys(state, refreshTodos, focusTask) {
         window.todoRenderer.createAndFocusTask(currentTaskId, state, refreshTodos);
         return;
       }
+      if (matchesHotkey(e, state.todoHotkeys.addSiblingTask)) {
+        e.preventDefault();
+        let parentId = null;
+        if (currentTaskId) {
+          const task = state.currentTodos.find(t => t.id === currentTaskId);
+          if (task) parentId = task.parentId;
+        }
+        window.todoRenderer.createAndFocusTask(parentId, state, refreshTodos);
+        return;
+      }
       return;
     }
     
@@ -76,6 +86,17 @@ function setupHotkeys(state, refreshTodos, focusTask) {
     if (matchesHotkey(e, state.todoHotkeys.addRootTask)) {
       e.preventDefault();
       window.todoRenderer.createAndFocusTask(null, state, refreshTodos);
+      return;
+    }
+
+    if (matchesHotkey(e, state.todoHotkeys.addSiblingTask)) {
+      e.preventDefault();
+      let parentId = null;
+      if (currentTaskId) {
+        const task = state.currentTodos.find(t => t.id === currentTaskId);
+        if (task) parentId = task.parentId;
+      }
+      window.todoRenderer.createAndFocusTask(parentId, state, refreshTodos);
       return;
     }
 

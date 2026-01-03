@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
   todoHotkeys: {
     addSubtask: 'Ctrl+Enter',
     addRootTask: 'Shift+Enter',
+    addSiblingTask: 'Enter',
     execute: 'Ctrl+Space',
     complete: 'Delete'
   }

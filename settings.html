@@ -386,6 +386,11 @@
         </div>
 
         <div class="row">
+          <label for="addSiblingTaskHotkey">Создать соседнюю задачу:</label>
+          <input id="addSiblingTaskHotkey" type="text" class="hotkey-input" placeholder="Enter">
+        </div>
+
+        <div class="row">
           <label for="executeHotkey">Запустить таймер задачи:</label>
           <input id="executeHotkey" type="text" class="hotkey-input" placeholder="Ctrl+Space">
         </div>
@@ -558,6 +563,7 @@
         if (values.todoHotkeys) {
           $('addSubtaskHotkey').value = values.todoHotkeys.addSubtask || 'Ctrl+Enter';
           $('addRootTaskHotkey').value = values.todoHotkeys.addRootTask || 'Shift+Enter';
+          $('addSiblingTaskHotkey').value = values.todoHotkeys.addSiblingTask || 'Enter';
           $('executeHotkey').value = values.todoHotkeys.execute || 'Ctrl+Space';
           $('completeHotkey').value = values.todoHotkeys.complete || 'Delete';
         }
@@ -598,6 +604,7 @@
         if (!values.todoHotkeys) values.todoHotkeys = {};
         values.todoHotkeys.addSubtask = $('addSubtaskHotkey').value || 'Ctrl+Enter';
         values.todoHotkeys.addRootTask = $('addRootTaskHotkey').value || 'Shift+Enter';
+        values.todoHotkeys.addSiblingTask = $('addSiblingTaskHotkey').value || 'Enter';
         values.todoHotkeys.execute = $('executeHotkey').value || 'Ctrl+Space';
         values.todoHotkeys.complete = $('completeHotkey').value || 'Delete';
 
@@ -754,6 +761,7 @@
       setupHotkeyRecording('resetHotkey');
       setupHotkeyRecording('addSubtaskHotkey');
       setupHotkeyRecording('addRootTaskHotkey');
+      setupHotkeyRecording('addSiblingTaskHotkey');
       setupHotkeyRecording('executeHotkey');
       setupHotkeyRecording('completeHotkey');
 

@@ -164,6 +164,7 @@
   <body>
     <div id="todo-header">
       <button class="btn-primary" id="btn-create-root" title="Shift+Enter">Создать корневую задачу</button>
+      <button class="btn-primary" id="btn-create-sibling" title="Enter" style="margin-left: 10px;">Создать соседнюю задачу</button>
     </div>
     <div id="todo-container">
       <div id="todo-container-inner">
@@ -209,6 +210,15 @@
 
       document.getElementById('btn-create-root').addEventListener('click', () => {
         renderer.createAndFocusTask(null, state, doRefresh);
+      });
+
+      document.getElementById('btn-create-sibling').addEventListener('click', () => {
+        let parentId = null;
+        if (state.activeTaskId) {
+          const task = state.currentTodos.find(t => t.id === state.activeTaskId);
+          if (task) parentId = task.parentId;
+        }
+        renderer.createAndFocusTask(parentId, state, doRefresh);
       });
       
       if (window.todoApi) {
