@@ -23,9 +23,14 @@ function activateTask(taskEl, taskId, state) {
 
 function updateExpanderIcon(iconEl, task, todos) {
   const hasChildrenTasks = hierarchy.hasChildren(task, todos);
+  
+  // Иконка самой задачи определяется типом подзадач её родителя
+  const parent = task.parentId ? todos.find(t => t.id === task.parentId) : null;
+  const parentSubtaskType = parent ? parent.subtaskType : 'list';
+
   if (!hasChildrenTasks) {
-    iconEl.textContent = '●';
-    iconEl.style.fontSize = '10px';
+    iconEl.textContent = parentSubtaskType === 'variants' ? '⇄' : '●';
+    iconEl.style.fontSize = parentSubtaskType === 'variants' ? '12px' : '10px';
   } else if (task.collapsed) {
     iconEl.textContent = '▶';
     iconEl.style.fontSize = '12px';
@@ -59,7 +64,8 @@ function createTaskExpander(task, todos, state, renderTasks) {
   return expanderEl;
 }
 
-function createTaskActions(taskId, state, refreshTodos, focusTask) {
+function createTaskActions(task, state, refreshTodos, focusTask) {
+  const taskId = task.id;
   const actionsEl = document.createElement('div');
   actionsEl.className = 'task-actions';
   
@@ -68,15 +74,23 @@ function createTaskActions(taskId, state, refreshTodos, focusTask) {
       await createAndFocusTask(taskId, state, refreshTodos);
     }},
     { text: '▶', title: 'Выполнить', action: () => {
-      const task = state.currentTodos.find(t => t.id === taskId);
-      if (window.todoApi && task) {
-        window.todoApi.startTimer(task.motivationWord || null);
+      const t = state.currentTodos.find(item => item.id === taskId);
+      if (window.todoApi && t) {
+        window.todoApi.startTimer(t.motivationWord || null);
       }
     }},
     { text: '✓', title: 'Выполнено', action: async () => {
       await window.todoApi.updateTodo(taskId, { completed: true, completedAt: Date.now() });
       await refreshTodos(state);
-    }}
+    }},
+    { 
+      text: task.subtaskType === 'variants' ? '☰' : '⇄', 
+      title: task.subtaskType === 'variants' ? 'Сменить на список' : 'Сменить на варианты', 
+      action: async () => {
+        await window.todoApi.toggleSubtaskType(taskId);
+        await refreshTodos(state);
+      }
+    }
   ];
   
   buttons.forEach(({ text, title, action }) => {
@@ -174,7 +188,18 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
     
     taskEl.appendChild(createTaskExpander(task, todos, state, renderTasks));
     taskEl.appendChild(contentEl);
-    taskEl.appendChild(createTaskActions(task.id, state, refreshTodos, focusTask));
+    taskEl.appendChild(createTaskActions(task, state, refreshTodos, focusTask));
+  } else {
+    if (!taskEl.hasAttribute('draggable')) dragDrop.setupDragDrop(taskEl, task, todos, state, refreshTodos);
+    updateExpanderIcon(taskEl.querySelector('.task-expander-icon'), task, todos);
+    const expander = taskEl.querySelector('.task-expander');
+    if (expander) expander.style.marginLeft = `${8 + hierarchy.calculateLevel(task, todos) * 9}px`;
+    if (state.activeTaskId === task.id) taskEl.classList.add('active');
+    
+    const oldActions = taskEl.querySelector('.task-actions');
+    if (oldActions) {
+      oldActions.replaceWith(createTaskActions(task, state, refreshTodos, focusTask));
+    }
   }
 
   taskEl.querySelector('.task-content').innerHTML = task.content || '';
@@ -187,18 +212,13 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
       richEditor.autoResize(taskEl.querySelector('.task-content'));
       if (state.currentTodos) hierarchyLines.drawHierarchyLines(state.currentTodos, targetContainer);
     });
-  } else {
-    if (!taskEl.hasAttribute('draggable')) dragDrop.setupDragDrop(taskEl, task, todos, state, refreshTodos);
-    updateExpanderIcon(taskEl.querySelector('.task-expander-icon'), task, todos);
-    const expander = taskEl.querySelector('.task-expander');
-    if (expander) expander.style.marginLeft = `${8 + hierarchy.calculateLevel(task, todos) * 9}px`;
-    if (state.activeTaskId === task.id) taskEl.classList.add('active');
   }
   
   if (!task.collapsed) {
-    todos.filter(t => t.parentId === task.id && !t.completed && hierarchy.isTaskVisible(t, todos))
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .forEach(child => renderTask(child, todos, targetContainer, state, refreshTodos, renderTasks));
+    const children = todos.filter(t => t.parentId === task.id && !t.completed && hierarchy.isTaskVisible(t, todos))
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    children.forEach(child => renderTask(child, todos, targetContainer, state, refreshTodos, renderTasks));
   }
 }
 

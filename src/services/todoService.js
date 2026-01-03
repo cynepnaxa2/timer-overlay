@@ -28,6 +28,14 @@ const TodoService = {
     return todoStore.updateTodo(id, { collapsed: !task.collapsed });
   },
 
+  toggleSubtaskType(id) {
+    const todos = todoStore.readTodos();
+    const task = todos.find(t => t.id === id);
+    if (!task) return null;
+    const newType = task.subtaskType === 'variants' ? 'list' : 'variants';
+    return todoStore.updateTodo(id, { subtaskType: newType });
+  },
+
   loadFromFile(filePath) {
     return todoStore.loadTodosFromFile(filePath);
   },

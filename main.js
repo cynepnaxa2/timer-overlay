@@ -501,6 +501,12 @@ function registerIpc() {
     return updated;
   });
   
+  ipcMain.handle('toggle-subtask-type', (_event, taskId) => {
+    const updated = todoService.toggleSubtaskType(taskId);
+    notifyTodosUpdated();
+    return updated;
+  });
+  
   ipcMain.handle('start-timer', (_event, motivationWord) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('restart-cycle');

@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('todoApi', {
   deleteTodo: (id) => ipcRenderer.invoke('delete-todo', id),
   reorderTodos: (todoIds) => ipcRenderer.invoke('reorder-todos', todoIds),
   toggleTaskCollapse: (taskId) => ipcRenderer.invoke('toggle-task-collapse', taskId),
+  toggleSubtaskType: (taskId) => ipcRenderer.invoke('toggle-subtask-type', taskId),
   startTimer: (motivationWord) => ipcRenderer.invoke('start-timer', motivationWord),
   loadTodosFromFile: () => ipcRenderer.invoke('load-todos-from-file'),
   loadDemoTodos: () => ipcRenderer.invoke('load-demo-todos'),

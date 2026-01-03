@@ -23,6 +23,9 @@ function readTodos() {
       if (todo.collapsed === undefined) {
         todo.collapsed = false;
       }
+      if (todo.subtaskType === undefined) {
+        todo.subtaskType = 'list';
+      }
       return todo;
     });
   } catch {
@@ -61,6 +64,7 @@ function createTodo(content, parentId = null) {
     createdAt: Date.now(),
     motivationWord: null,
     collapsed: false,
+    subtaskType: 'list', // 'list' or 'variants'
     economics: {
       cost: 0,
       gain: 0,
