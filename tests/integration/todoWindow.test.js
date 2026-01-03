@@ -14,16 +14,17 @@ describe('Todo window', () => {
     expect(fs.existsSync(preload)).toBe(true);
   });
 
-  test('main.js contains createTodoWindow', () => {
-    const mainJs = path.join(projectRoot, 'main.js');
-    const content = fs.readFileSync(mainJs, 'utf8');
+  test('windowManager.js contains createTodoWindow', () => {
+    const windowManagerJs = path.join(projectRoot, 'src', 'main', 'windowManager.js');
+    const content = fs.readFileSync(windowManagerJs, 'utf8');
     expect(content).toContain('createTodoWindow');
+    // windowManager uses state.todoWindow
     expect(content).toContain('todoWindow');
   });
 
-  test('main.js contains todo IPC handlers', () => {
-    const mainJs = path.join(projectRoot, 'main.js');
-    const content = fs.readFileSync(mainJs, 'utf8');
+  test('ipcHandlers.js contains todo IPC handlers', () => {
+    const ipcHandlersJs = path.join(projectRoot, 'src', 'main', 'ipcHandlers.js');
+    const content = fs.readFileSync(ipcHandlersJs, 'utf8');
     expect(content).toContain('get-todos');
     expect(content).toContain('create-todo');
     expect(content).toContain('update-todo');

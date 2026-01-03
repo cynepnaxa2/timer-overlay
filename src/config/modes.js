@@ -133,10 +133,27 @@ function getDefaultMode() {
   return MODES.money.id;
 }
 
+/**
+ * Сериализовать режим для передачи через IPC
+ */
+function serializeMode(mode) {
+  if (!mode) return null;
+  return {
+    id: mode.id,
+    name: mode.name,
+    emoji: mode.emoji,
+    symbol: mode.symbol,
+    color: mode.color,
+    unit: mode.unit,
+    description: mode.description
+  };
+}
+
 module.exports = {
   MODES,
   getMode,
   getAllModes,
-  getDefaultMode
+  getDefaultMode,
+  serializeMode
 };
 
