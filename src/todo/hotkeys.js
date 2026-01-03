@@ -130,11 +130,16 @@ function setupHotkeys(state, refreshTodos, focusTask) {
       e.preventDefault();
       const current = state.currentTodos.find(t => t.id === currentTaskId);
       if (current) {
-        const siblings = state.currentTodos.filter(t => t.parentId === current.parentId && !t.completed && window.todoHierarchy.isTaskVisible(t, state.currentTodos))
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
-        const idx = siblings.findIndex(t => t.id === current.id);
-        if (idx !== -1 && idx < siblings.length - 1) {
-          window.todoRenderer.focusTask(siblings[idx + 1].id, state);
+        let candidate = current;
+        while (candidate) {
+          const siblings = state.currentTodos.filter(t => t.parentId === candidate.parentId && !t.completed && window.todoHierarchy.isTaskVisible(t, state.currentTodos))
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          const idx = siblings.findIndex(t => t.id === candidate.id);
+          if (idx !== -1 && idx < siblings.length - 1) {
+            window.todoRenderer.focusTask(siblings[idx + 1].id, state);
+            return;
+          }
+          candidate = candidate.parentId ? state.currentTodos.find(t => t.id === candidate.parentId) : null;
         }
       }
     } else if (matchesHotkey(e, state.todoHotkeys.navPrev)) {
@@ -146,6 +151,8 @@ function setupHotkeys(state, refreshTodos, focusTask) {
         const idx = siblings.findIndex(t => t.id === current.id);
         if (idx > 0) {
           window.todoRenderer.focusTask(siblings[idx - 1].id, state);
+        } else if (current.parentId) {
+          window.todoRenderer.focusTask(current.parentId, state);
         }
       }
     } else if (matchesHotkey(e, state.todoHotkeys.navChild)) {
