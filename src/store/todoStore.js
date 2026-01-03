@@ -4,6 +4,14 @@ const { app } = require('electron');
 const { randomUUID } = require('crypto');
 
 function getTodosPath() {
+  // Use settingsStore to check for custom sync path
+  const { readSettings } = require('./settingsStore');
+  const settings = readSettings();
+  
+  if (settings.syncFolderPath && fs.existsSync(settings.syncFolderPath)) {
+    return path.join(settings.syncFolderPath, 'todos.json');
+  }
+  
   const dir = app.getPath('userData');
   return path.join(dir, 'todos.json');
 }

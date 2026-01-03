@@ -275,6 +275,19 @@
         </div>
       </div>
 
+      <!-- Синхронизация -->
+      <div class="section">
+        <div class="section-title">Синхронизация</div>
+        <div class="row">
+          <label>Папка для хранения задач:</label>
+          <div style="font-size: 11px; color: #666; margin-bottom: 8px; word-break: break-all;" id="syncFolderPathDisplay">Стандартная папка приложения</div>
+          <button id="selectSyncFolder" style="background: #0078d4; color: white; width: 100%;">Выбрать папку (Dropbox/Google Drive...)</button>
+          <div style="font-size: 11px; color: #666; margin-top: 8px;">
+            Выберите папку внутри вашего облачного хранилища для синхронизации между устройствами.
+          </div>
+        </div>
+      </div>
+
       <!-- Уровни отображения -->
       <div class="section">
         <div class="section-title">Уровень отображения</div>
@@ -560,6 +573,9 @@
         $('mode').value = values.mode || 'money';
         $('resetHotkey').value = values.resetHotkey || 'Ctrl+Shift+R';
         
+        // Синхронизация
+        $('syncFolderPathDisplay').textContent = values.syncFolderPath || 'Стандартная папка приложения';
+        
         if (values.todoHotkeys) {
           $('addSubtaskHotkey').value = values.todoHotkeys.addSubtask || 'Ctrl+Enter';
           $('addRootTaskHotkey').value = values.todoHotkeys.addRootTask || 'Shift+Enter';
@@ -764,6 +780,18 @@
       setupHotkeyRecording('addSiblingTaskHotkey');
       setupHotkeyRecording('executeHotkey');
       setupHotkeyRecording('completeHotkey');
+
+      $('selectSyncFolder').addEventListener('click', async () => {
+        try {
+          const newPath = await window.settingsApi.selectSyncFolder();
+          if (newPath) {
+            values.syncFolderPath = newPath;
+            $('syncFolderPathDisplay').textContent = newPath;
+          }
+        } catch (err) {
+          console.error('Failed to select sync folder:', err);
+        }
+      });
 
       $('close').addEventListener('click', () => window.close());
       

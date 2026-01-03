@@ -23,7 +23,8 @@ contextBridge.exposeInMainWorld('settingsApi', {
   onCountersUpdated: (callback) => {
     ipcRenderer.on('counters-updated', (_event, counters) => callback(counters));
   },
-  resetStatistics: () => ipcRenderer.invoke('reset-statistics')
+  resetStatistics: () => ipcRenderer.invoke('reset-statistics'),
+  selectSyncFolder: () => ipcRenderer.invoke('select-sync-folder')
 });
 
 

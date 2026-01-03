@@ -7,7 +7,8 @@ function calculateLevel(task, todos) {
 function isTaskVisible(task, todos) {
   if (!task.parentId) return true;
   const parent = todos.find(t => t.id === task.parentId);
-  return !parent || (!parent.collapsed && isTaskVisible(parent, todos));
+  // Задача видима, если родитель существует, не свернут и НЕ завершен
+  return !parent || (!parent.collapsed && !parent.completed && isTaskVisible(parent, todos));
 }
 
 function hasChildren(task, todos) {

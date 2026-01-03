@@ -182,6 +182,33 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     return state.currentSettings.todoHotkeys;
   });
   
+  ipcMain.handle('select-sync-folder', async () => {
+    if (!state.settingsWindow || state.settingsWindow.isDestroyed()) {
+      return null;
+    }
+    
+    const result = await dialog.showOpenDialog(state.settingsWindow, {
+      title: 'Выберите папку для синхронизации',
+      properties: ['openDirectory']
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    
+    const newPath = result.filePaths[0];
+    
+    // Update settings with new path
+    if (!state.currentSettings) state.currentSettings = readSettings();
+    state.currentSettings.syncFolderPath = newPath;
+    state.currentSettings = writeSettings(state.currentSettings);
+    
+    // Notify all windows that todos might have changed
+    notifyTodosUpdated();
+    
+    return newPath;
+  });
+  
   ipcMain.on('update-settings', async (_event, patch) => {
     if (!state.currentSettings) state.currentSettings = readSettings();
     const durationChanged = 'durationSeconds' in patch;

@@ -237,7 +237,7 @@ function renderTasks(todos, preserveExisting, state) {
     if (svg) container.appendChild(svg);
     state.activeTaskId = null;
   } else {
-    const currentIds = new Set(todos.filter(t => !t.completed).map(t => t.id));
+    const currentIds = new Set(todos.filter(t => !t.completed && hierarchy.isTaskVisible(t, todos)).map(t => t.id));
     container.querySelectorAll('.task').forEach(el => {
       if (!currentIds.has(el.dataset.taskId)) {
         el.remove();

@@ -27,7 +27,8 @@ const DEFAULT_SETTINGS = {
     addSiblingTask: 'Enter',
     execute: 'Ctrl+Space',
     complete: 'Delete'
-  }
+  },
+  syncFolderPath: null
 };
 
 function getSettingsPath() {
