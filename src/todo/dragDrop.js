@@ -9,6 +9,7 @@ function setupDragDrop(taskEl, task, todos, state, refreshTodos) {
   
   taskEl.draggable = true;
   
+  
   taskEl.addEventListener('dragstart', (e) => {
     if (e.target.closest('.task-content') && document.activeElement === e.target.closest('.task-content')) {
       e.preventDefault();
