@@ -4,6 +4,7 @@ function createTodoState() {
     activeTaskId: null,
     currentTodos: [],
     draggingTaskId: null,
+    showCompleted: false,
     todoHotkeys: {
       addSubtask: 'Ctrl+Enter',
       addRootTask: 'Shift+Enter',

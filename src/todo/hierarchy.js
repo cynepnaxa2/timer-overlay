@@ -4,22 +4,25 @@ function calculateLevel(task, todos) {
   return parent ? calculateLevel(parent, todos) + 1 : 0;
 }
 
-function isTaskVisible(task, todos) {
-  if (!task.parentId) return true;
+function isTaskVisible(task, todos, showCompleted = false) {
+  if (!task.parentId) {
+    return showCompleted || !task.completed;
+  }
   const parent = todos.find(t => t.id === task.parentId);
-  // Задача видима, если родитель существует, не свернут и НЕ завершен
-  return !parent || (!parent.collapsed && !parent.completed && isTaskVisible(parent, todos));
+  // Задача видима, если родитель существует, не свернут и (мы показываем выполненные ИЛИ задача не завершена)
+  const isSelfVisible = showCompleted || !task.completed;
+  return isSelfVisible && (!parent || (!parent.collapsed && (showCompleted || !parent.completed) && isTaskVisible(parent, todos, showCompleted)));
 }
 
-function hasChildren(task, todos) {
-  return todos.some(t => t.parentId === task.id && !t.completed);
+function hasChildren(task, todos, showCompleted = false) {
+  return todos.some(t => t.parentId === task.id && (showCompleted || !t.completed));
 }
 
-function getLastVisibleDescendant(task, todos) {
+function getLastVisibleDescendant(task, todos, showCompleted = false) {
   if (task.collapsed) return task;
-  const children = todos.filter(t => t.parentId === task.id && !t.completed && isTaskVisible(t, todos))
+  const children = todos.filter(t => t.parentId === task.id && (showCompleted || !t.completed) && isTaskVisible(t, todos, showCompleted))
     .sort((a, b) => (a.order || 0) - (b.order || 0));
-  return children.length === 0 ? task : getLastVisibleDescendant(children[children.length - 1], todos);
+  return children.length === 0 ? task : getLastVisibleDescendant(children[children.length - 1], todos, showCompleted);
 }
 
 function getAllDescendants(taskId, todos) {

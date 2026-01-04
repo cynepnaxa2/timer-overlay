@@ -132,7 +132,7 @@ function setupHotkeys(state, refreshTodos, focusTask) {
       if (current) {
         let candidate = current;
         while (candidate) {
-          const siblings = state.currentTodos.filter(t => t.parentId === candidate.parentId && !t.completed && window.todoHierarchy.isTaskVisible(t, state.currentTodos))
+          const siblings = state.currentTodos.filter(t => t.parentId === candidate.parentId && (state.showCompleted || !t.completed) && window.todoHierarchy.isTaskVisible(t, state.currentTodos, state.showCompleted))
             .sort((a, b) => (a.order || 0) - (b.order || 0));
           const idx = siblings.findIndex(t => t.id === candidate.id);
           if (idx !== -1 && idx < siblings.length - 1) {
@@ -146,7 +146,7 @@ function setupHotkeys(state, refreshTodos, focusTask) {
       e.preventDefault();
       const current = state.currentTodos.find(t => t.id === currentTaskId);
       if (current) {
-        const siblings = state.currentTodos.filter(t => t.parentId === current.parentId && !t.completed && window.todoHierarchy.isTaskVisible(t, state.currentTodos))
+        const siblings = state.currentTodos.filter(t => t.parentId === current.parentId && (state.showCompleted || !t.completed) && window.todoHierarchy.isTaskVisible(t, state.currentTodos, state.showCompleted))
           .sort((a, b) => (a.order || 0) - (b.order || 0));
         const idx = siblings.findIndex(t => t.id === current.id);
         if (idx > 0) {
@@ -160,7 +160,7 @@ function setupHotkeys(state, refreshTodos, focusTask) {
       const current = state.currentTodos.find(t => t.id === currentTaskId);
       if (current) {
         const navigateToChild = () => {
-          const children = state.currentTodos.filter(t => t.parentId === currentTaskId && !t.completed)
+          const children = state.currentTodos.filter(t => t.parentId === currentTaskId && (state.showCompleted || !t.completed))
             .sort((a, b) => (a.order || 0) - (b.order || 0));
           if (children.length > 0) {
             window.todoRenderer.focusTask(children[0].id, state);

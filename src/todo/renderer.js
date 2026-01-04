@@ -21,8 +21,8 @@ function activateTask(taskEl, taskId, state) {
   state.activeTaskId = taskId;
 }
 
-function updateExpanderIcon(iconEl, task, todos) {
-  const hasChildrenTasks = hierarchy.hasChildren(task, todos);
+function updateExpanderIcon(iconEl, task, todos, showCompleted = false) {
+  const hasChildrenTasks = hierarchy.hasChildren(task, todos, showCompleted);
   
   // Иконка самой задачи определяется типом подзадач её родителя
   const parent = task.parentId ? todos.find(t => t.id === task.parentId) : null;
@@ -49,10 +49,10 @@ function createTaskExpander(task, todos, state, renderTasks) {
   
   const iconEl = document.createElement('div');
   iconEl.className = 'task-expander-icon';
-  updateExpanderIcon(iconEl, task, todos);
+  updateExpanderIcon(iconEl, task, todos, state.showCompleted);
   expanderEl.appendChild(iconEl);
   
-  if (hierarchy.hasChildren(task, todos)) {
+  if (hierarchy.hasChildren(task, todos, state.showCompleted)) {
     expanderEl.addEventListener('click', async (e) => {
       e.stopPropagation();
       await window.todoApi.toggleTaskCollapse(task.id);
@@ -80,9 +80,29 @@ function createTaskActions(task, state, refreshTodos, focusTask) {
       }
     }},
     { text: '✓', title: 'Выполнено', action: async () => {
-      await window.todoApi.updateTodo(taskId, { completed: true, completedAt: Date.now() });
+      await window.todoApi.updateTodo(taskId, { completed: !task.completed, completedAt: !task.completed ? Date.now() : null });
       await refreshTodos(state);
     }},
+    { 
+      text: '✕', 
+      title: 'Удалить задачу', 
+      action: async (btn) => {
+        if (btn.textContent === '✕') {
+          btn.textContent = '✕?';
+          btn.classList.add('confirming-delete');
+          // Сбрасываем через 3 секунды, если не нажали повторно
+          setTimeout(() => {
+            if (btn.textContent === '✕?') {
+              btn.textContent = '✕';
+              btn.classList.remove('confirming-delete');
+            }
+          }, 3000);
+        } else {
+          await window.todoApi.deleteTodo(taskId);
+          await refreshTodos(state);
+        }
+      }
+    },
     { text: '↵', title: 'Создать соседнюю задачу', action: async () => {
       const parentId = task.parentId || null;
       await createAndFocusTask(parentId, state, refreshTodos, taskId);
@@ -103,7 +123,7 @@ function createTaskActions(task, state, refreshTodos, focusTask) {
     btn.title = title;
     btn.onclick = (e) => {
       e.stopPropagation();
-      if (window.todoApi) action();
+      if (window.todoApi) action(btn);
     };
     actionsEl.appendChild(btn);
   });
@@ -195,7 +215,7 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
     taskEl.appendChild(createTaskActions(task, state, refreshTodos, focusTask));
   } else {
     if (!taskEl.hasAttribute('draggable')) dragDrop.setupDragDrop(taskEl, task, todos, state, refreshTodos);
-    updateExpanderIcon(taskEl.querySelector('.task-expander-icon'), task, todos);
+    updateExpanderIcon(taskEl.querySelector('.task-expander-icon'), task, todos, state.showCompleted);
     const expander = taskEl.querySelector('.task-expander');
     if (expander) expander.style.marginLeft = `${8 + hierarchy.calculateLevel(task, todos) * 9}px`;
     if (state.activeTaskId === task.id) taskEl.classList.add('active');
@@ -205,6 +225,8 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
       oldActions.replaceWith(createTaskActions(task, state, refreshTodos, focusTask));
     }
   }
+
+  taskEl.classList.toggle('completed', !!task.completed);
 
   const contentEl = taskEl.querySelector('.task-content');
   if (contentEl !== state.focusedElement) {
@@ -222,7 +244,7 @@ function renderTask(task, todos, container, state, refreshTodos, renderTasks) {
   }
   
   if (!task.collapsed) {
-    const children = todos.filter(t => t.parentId === task.id && !t.completed && hierarchy.isTaskVisible(t, todos))
+    const children = todos.filter(t => t.parentId === task.id && (state.showCompleted || !t.completed) && hierarchy.isTaskVisible(t, todos, state.showCompleted))
       .sort((a, b) => (a.order || 0) - (b.order || 0));
     
     children.forEach(child => renderTask(child, todos, targetContainer, state, refreshTodos, renderTasks));
@@ -240,7 +262,7 @@ function renderTasks(todos, preserveExisting, state) {
     if (svg) container.appendChild(svg);
     state.activeTaskId = null;
   } else {
-    const currentIds = new Set(todos.filter(t => !t.completed && hierarchy.isTaskVisible(t, todos)).map(t => t.id));
+    const currentIds = new Set(todos.filter(t => (state.showCompleted || !t.completed) && hierarchy.isTaskVisible(t, todos, state.showCompleted)).map(t => t.id));
     container.querySelectorAll('.task').forEach(el => {
       if (!currentIds.has(el.dataset.taskId)) {
         el.remove();
@@ -249,7 +271,7 @@ function renderTasks(todos, preserveExisting, state) {
     });
   }
   
-  const rootTasks = todos.filter(t => !t.parentId && !t.completed && hierarchy.isTaskVisible(t, todos))
+  const rootTasks = todos.filter(t => !t.parentId && (state.showCompleted || !t.completed) && hierarchy.isTaskVisible(t, todos, state.showCompleted))
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
   rootTasks.forEach(task => renderTask(task, todos, container, state, refreshTodos, renderTasks));
