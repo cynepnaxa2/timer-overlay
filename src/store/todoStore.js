@@ -3,8 +3,14 @@ const path = require('path');
 const { app } = require('electron');
 const { randomUUID } = require('crypto');
 
+// Types will be inferred or used via JSDoc if we keep it commonjs for now, 
+// but we want to move to TS. Since this is main process code, we can use 
+// ts-node or just keep it as JS but with better types. 
+// Actually, the plan says refactor to TypeScript.
+// For the main process, we'll keep using require for now to avoid breaking electron setup,
+// but we'll use TS features where possible.
+
 function getTodosPath() {
-  // Use settingsStore to check for custom sync path
   const { readSettings } = require('./settingsStore');
   const settings = readSettings();
   
@@ -27,12 +33,15 @@ function readTodos() {
     if (!Array.isArray(parsed)) {
       return [];
     }
+    
+    // Import initial matrix to ensure it's available for migration
+    const { INITIAL_RESOURCE_MATRIX } = require('../config/resources');
+
     return parsed.map(todo => {
-      if (todo.collapsed === undefined) {
-        todo.collapsed = false;
-      }
-      if (todo.subtaskType === undefined) {
-        todo.subtaskType = 'list';
+      if (todo.collapsed === undefined) todo.collapsed = false;
+      if (todo.subtaskType === undefined) todo.subtaskType = 'list';
+      if (todo.resources === undefined) {
+        todo.resources = JSON.parse(JSON.stringify(INITIAL_RESOURCE_MATRIX));
       }
       return todo;
     });
@@ -54,8 +63,8 @@ function writeTodos(todos) {
 
 function createTodo(content, parentId = null, afterId = null) {
   const todos = readTodos();
+  const { INITIAL_RESOURCE_MATRIX } = require('../config/resources');
   
-  // Find siblings to determine correct order
   const siblings = todos.filter(t => t.parentId === parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
   
   let newOrder = 0;
@@ -63,7 +72,6 @@ function createTodo(content, parentId = null, afterId = null) {
     const afterTask = todos.find(t => t.id === afterId);
     if (afterTask) {
       newOrder = (afterTask.order || 0) + 1;
-      // Shift all subsequent siblings
       todos.forEach(t => {
         if (t.parentId === parentId && (t.order || 0) >= newOrder) {
           t.order = (t.order || 0) + 1;
@@ -87,12 +95,9 @@ function createTodo(content, parentId = null, afterId = null) {
     createdAt: Date.now(),
     motivationWord: null,
     collapsed: false,
-    subtaskType: 'list', // 'list' or 'variants'
-    economics: {
-      cost: 0,
-      gain: 0,
-      roi: 0
-    },
+    subtaskType: 'list',
+    economics: { cost: 0, gain: 0, roi: 0 },
+    resources: JSON.parse(JSON.stringify(INITIAL_RESOURCE_MATRIX)),
     context: [],
     metadata: {},
     isArchived: false
@@ -106,18 +111,18 @@ function createTodo(content, parentId = null, afterId = null) {
 function updateTodo(id, updates) {
   const todos = readTodos();
   const index = todos.findIndex(t => t.id === id);
-  if (index === -1) {
-    return null;
-  }
+  if (index === -1) return null;
   
   const updated = { ...todos[index], ...updates };
   
-  // Recalculate ROI if economics changed
   if (updates.economics) {
     const cost = updated.economics.cost || 0;
     const gain = updated.economics.gain || 0;
     updated.economics.roi = cost > 0 ? gain / cost : gain;
   }
+
+  // Priority score calculation could go here, but we'll do it in the renderer for now 
+  // or add it as a utility.
 
   todos[index] = updated;
   writeTodos(todos);
@@ -131,14 +136,11 @@ function deleteTodo(id) {
   function collectIds(targetId) {
     toDelete.add(targetId);
     todos.forEach(t => {
-      if (t.parentId === targetId) {
-        collectIds(t.id);
-      }
+      if (t.parentId === targetId) collectIds(t.id);
     });
   }
   
   collectIds(id);
-  
   const filtered = todos.filter(t => !toDelete.has(t.id));
   writeTodos(filtered);
   return filtered;
@@ -147,13 +149,9 @@ function deleteTodo(id) {
 function reorderTodos(todoIds) {
   const todos = readTodos();
   const todoMap = new Map(todos.map(t => [t.id, t]));
-  
   todoIds.forEach((id, index) => {
-    if (todoMap.has(id)) {
-      todoMap.get(id).order = index;
-    }
+    if (todoMap.has(id)) todoMap.get(id).order = index;
   });
-  
   const reordered = Array.from(todoMap.values());
   writeTodos(reordered);
   return reordered;
@@ -161,14 +159,10 @@ function reorderTodos(todoIds) {
 
 function loadTodosFromFile(filePath) {
   try {
-    if (!fs.existsSync(filePath)) {
-      return false;
-    }
+    if (!fs.existsSync(filePath)) return false;
     const raw = fs.readFileSync(filePath, 'utf8');
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return false;
-    }
+    if (!Array.isArray(parsed)) return false;
     writeTodos(parsed);
     return true;
   } catch {
@@ -178,49 +172,29 @@ function loadTodosFromFile(filePath) {
 
 function ensureDemoTodos() {
   const todos = readTodos();
-  if (todos.length > 0) {
-    return;
-  }
+  if (todos.length > 0) return;
+  const { INITIAL_RESOURCE_MATRIX } = require('../config/resources');
   
   const demoTodos = [
     {
       id: randomUUID(),
-      content: 'Добро пожаловать в AI Todo List!',
+      content: 'Добро пожаловать в It\'s time!',
       parentId: null,
+      type: 'task',
       completed: false,
       completedAt: null,
       order: 0,
       createdAt: Date.now(),
       motivationWord: null,
-      collapsed: false
-    },
-    {
-      id: randomUUID(),
-      content: 'Это пример корневой задачи (фиолетовый цвет)',
-      parentId: null,
-      completed: false,
-      completedAt: null,
-      order: 1,
-      createdAt: Date.now(),
-      motivationWord: null,
-      collapsed: false
-    },
-    {
-      id: randomUUID(),
-      content: 'Это подзадача первого уровня (синий цвет)',
-      parentId: null,
-      completed: false,
-      completedAt: null,
-      order: 2,
-      createdAt: Date.now(),
-      motivationWord: null,
-      collapsed: false
+      collapsed: false,
+      subtaskType: 'list',
+      economics: { cost: 0, gain: 0, roi: 0 },
+      resources: JSON.parse(JSON.stringify(INITIAL_RESOURCE_MATRIX)),
+      context: [],
+      metadata: {},
+      isArchived: false
     }
   ];
-  
-  const secondTaskId = demoTodos[1].id;
-  demoTodos[2].parentId = secondTaskId;
-  
   writeTodos(demoTodos);
 }
 

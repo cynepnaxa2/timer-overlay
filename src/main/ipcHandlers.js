@@ -158,6 +158,62 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     }
     return success;
   });
+
+  ipcMain.handle('load-stress-test', () => {
+    const stressTodos = [];
+    const { randomUUID } = require('crypto');
+    const { INITIAL_RESOURCE_MATRIX } = require('../config/resources');
+    
+    for (let i = 0; i < 5; i++) {
+      const rootId = randomUUID();
+      stressTodos.push({
+        id: rootId,
+        content: `Корневая задача ${i + 1}`,
+        parentId: null,
+        type: 'task',
+        completed: false,
+        order: i,
+        createdAt: Date.now(),
+        subtaskType: 'list',
+        resources: JSON.parse(JSON.stringify(INITIAL_RESOURCE_MATRIX))
+      });
+      
+      for (let j = 0; j < 3; j++) {
+        const subId = randomUUID();
+        stressTodos.push({
+          id: subId,
+          content: `Подзадача ${i+1}.${j+1}`,
+          parentId: rootId,
+          type: 'task',
+          completed: false,
+          order: j,
+          createdAt: Date.now(),
+          subtaskType: 'variants',
+          resources: JSON.parse(JSON.stringify(INITIAL_RESOURCE_MATRIX))
+        });
+        
+        for (let k = 0; k < 2; k++) {
+          stressTodos.push({
+            id: randomUUID(),
+            content: `Микрозадача ${i+1}.${j+1}.${k+1}`,
+            parentId: subId,
+            type: 'task',
+            completed: false,
+            order: k,
+            createdAt: Date.now(),
+            subtaskType: 'list',
+            resources: JSON.parse(JSON.stringify(INITIAL_RESOURCE_MATRIX))
+          });
+        }
+      }
+    }
+    
+    const fs = require('fs');
+    const todoStore = require('../store/todoStore');
+    todoStore.writeTodos(stressTodos);
+    notifyTodosUpdated();
+    return true;
+  });
   
   ipcMain.handle('capture-todo-screenshot', async () => {
     if (!state.todoWindow || state.todoWindow.isDestroyed()) return null;

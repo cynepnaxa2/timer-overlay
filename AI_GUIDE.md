@@ -24,28 +24,24 @@
   - Удалить неиспользуемый код
 
 ## 📁 Архитектура и Файлы
-Приложение следует модульной структуре: `main.js` (entry) -> `src/main/*` (main logic) -> `src/services/*` (business logic) -> `src/store/*` (persistence).
+Приложение следует модульной структуре: `main.js` (entry) -> `src/main/*` (main logic) -> `src/renderer.tsx` (React Entry) -> `src/components/*` (UI).
+
+### Стек технологий
+- **Framework:** React + Vite
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **State:** Zustand
 
 ### Главный процесс (Main process)
-- `main.js`: Точка входа Electron. Инициализирует модули и применяет настройки автозапуска.
-- `src/main/state.js`: Глобальное состояние (хранит ссылки на объекты окон, текущие настройки, таймеры).
-- `src/main/windowManager.js`: Создание и конфигурация всех окон (Overlay, Settings, Todo).
-- `src/main/ipcHandlers.js`: ЕДИНСТВЕННОЕ место для регистрации всех `ipcMain.handle` и `ipcMain.on`.
-- `src/main/timerManager.js`: Логика отсчета времени, синхронизация с анимацией оверлея, регистрация глобальных хоткеев сброса.
-- `src/main/trayManager.js`: Управление иконкой в системном трее и её контекстным меню.
-
+...
 ### Рендерер и UI (Renderer)
-- `index.html`: Оверлей (индикатор). Анимируется через CSS, управляется IPC-событиями (`counter-updated`).
-- `settings.html`: UI настроек с мгновенным применением изменений.
-- `todo.html`: Полноэкранный менеджер задач с поддержкой иерархии.
-- `preload/*.js`: Экспонируют безопасные API (`overlayApi`, `settingsApi`, `todoApi`) через `contextBridge`.
-- `src/todo/`:
-  - `renderer.js`: Ядро отрисовки задач, управление фокусом и экшенами.
-  - `state.js`: Локальное состояние UI (активная задача, данные из Store).
-  - `hierarchy.js`: Логика уровней вложенности и видимости (скрытие подзадач).
-  - `hierarchyLines.js`: Динамическая отрисовка SVG-связей между задачами.
-  - `dragDrop.js`: Логика перемещения задач мышью.
-  - `hotkeys.js`: Локальные горячие клавиши в окне Todo.
+- `src/App.tsx`: Корневой компонент Todo-листа.
+- `src/components/TaskList.tsx`: Рекурсивный список задач.
+- `src/components/TaskItem.tsx`: Компонент задачи с CSS-иерархией.
+- `src/components/ResourceMatrixInput.tsx`: Матрица ресурсов (0-9).
+- `src/store/renderer/useTodoStore.ts`: Хранилище состояния UI.
+- `src/overlay.tsx`: Рендерер оверлея.
+- `src/settings.tsx`: Рендерер настроек.
 
 ### Бизнес-логика и Хранение
 - `src/services/todoService.js`: Прослойка между IPC и Store. Содержит бизнес-правила (рекурсивное удаление, переключение состояния).
@@ -53,6 +49,7 @@
 - `src/store/todoStore.js`: Работа с `todos.json`. CRUD операции, расчет ROI, поддержка кастомных путей синхронизации.
 
 ### Утилиты (Utils)
+- `src/utils/hierarchy.ts`: Логика иерархии задач (descendants, visibility).
 - `src/utils/richEditor.js`: Управление `contenteditable` (авто-размер, очистка вставки, дебаунс сохранения).
 - `src/utils/positioning.js`: Расчет координат для прилипания окон к краям экрана.
 - `src/utils/style.js`: Сборка динамических CSS-переменных из объекта настроек.

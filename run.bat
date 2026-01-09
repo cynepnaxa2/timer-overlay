@@ -1,0 +1,9 @@
+@echo off
+echo [1/3] Очистка портов...
+powershell -Command "Stop-Process -Id (Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue).OwningProcess -Force -ErrorAction SilentlyContinue" 2>nul
+
+echo [2/3] Установка зависимостей (если нужно)...
+call npm install
+
+echo [3/3] Запуск сервера и приложения...
+npm run start:dev

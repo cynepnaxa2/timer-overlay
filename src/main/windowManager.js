@@ -8,6 +8,16 @@ const { getMode, serializeMode } = require('../config/modes');
 const { getFormattedCounter } = require('../utils/counters');
 const todoService = require('../services/todoService');
 
+const isDev = !app.isPackaged;
+const VITE_DEV_SERVER_URL = 'http://localhost:5173';
+
+function getWindowURL(htmlPath) {
+  if (isDev) {
+    return `${VITE_DEV_SERVER_URL}/${htmlPath}`;
+  }
+  return path.join(__dirname, '..', '..', 'dist-renderer', htmlPath);
+}
+
 function getOverlayWidth() {
   if (!state.currentSettings) state.currentSettings = readSettings();
   const settings = state.currentSettings;
@@ -50,8 +60,8 @@ function createOverlayWindow() {
     y: bounds.y,
     width: bounds.width,
     height: bounds.height,
-    frame: false,
     transparent: true,
+    frame: false,
     resizable: false,
     movable: false,
     skipTaskbar: true,
@@ -94,7 +104,11 @@ function createOverlayWindow() {
     state.mainWindow = null;
   });
 
-  state.mainWindow.loadFile(path.join(__dirname, '..', '..', 'index.html'));
+  if (isDev) {
+    state.mainWindow.loadURL(getWindowURL('index.html'));
+  } else {
+    state.mainWindow.loadFile(getWindowURL('index.html'));
+  }
 }
 
 async function applyOverlayStyles() {
@@ -166,7 +180,12 @@ function createSettingsWindow() {
   state.settingsWindow.on('closed', () => {
     state.settingsWindow = null;
   });
-  state.settingsWindow.loadFile(path.join(__dirname, '..', '..', 'settings.html'));
+  
+  if (isDev) {
+    state.settingsWindow.loadURL(getWindowURL('settings.html'));
+  } else {
+    state.settingsWindow.loadFile(getWindowURL('settings.html'));
+  }
 }
 
 function createTodoWindow() {
@@ -241,7 +260,11 @@ function createTodoWindow() {
     state.todoWindow = null;
   });
   
-  state.todoWindow.loadFile(path.join(__dirname, '..', '..', 'todo.html'));
+  if (isDev) {
+    state.todoWindow.loadURL(getWindowURL('todo.html'));
+  } else {
+    state.todoWindow.loadFile(getWindowURL('todo.html'));
+  }
 }
 
 module.exports = {

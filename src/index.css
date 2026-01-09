@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-resource-loss: #A05A2C;
+  --color-resource-cost: #FF5555;
+  --color-resource-profit: #50FA7B;
+  --color-resource-header: #F1FA8C;
+}
+
+/* Ensure overlay background is strictly transparent */
+#root:has(.animate-rise) {
+  background-color: transparent !important;
+}
+
+body {
+  background-color: transparent !important;
+}
+
+.bg-\[\#1a1a1a\]:not(.animate-rise *) {
+  /* Only apply background if NOT in overlay */
+}
+
+/* Perfect Drag-n-Drop styles from original version */
+.drag-over-top {
+  border-top: 2px solid rgba(255, 255, 255, 0.8) !important;
+}
+
+.drag-over-bottom {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.8) !important;
+}
+
+.drag-over-middle {
+  background: rgba(255, 255, 255, 0.1) !important;
+  outline: 1px dashed rgba(255, 255, 255, 0.5);
+}
+
+.task-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
