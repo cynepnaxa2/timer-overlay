@@ -89,6 +89,14 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     }
     return todos;
   });
+
+  ipcMain.handle('move-todo', (_event, draggingId, targetId, position) => {
+    const todos = todoService.moveTodo(draggingId, targetId, position);
+    if (state.todoWindow && !state.todoWindow.isDestroyed()) {
+      state.todoWindow.webContents.send('todos-updated', todos);
+    }
+    return todos;
+  });
   
   ipcMain.handle('toggle-task-collapse', (_event, taskId) => {
     const updated = todoService.toggleCollapse(taskId);

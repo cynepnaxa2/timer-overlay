@@ -21,6 +21,10 @@ const TodoService = {
     return todoStore.reorderTodos(todoIds);
   },
 
+  moveTodo(draggingId, targetId, position) {
+    return todoStore.moveTodo(draggingId, targetId, position);
+  },
+
   toggleCollapse(id) {
     const todos = todoStore.readTodos();
     const task = todos.find(t => t.id === id);

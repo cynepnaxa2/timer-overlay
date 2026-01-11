@@ -9,7 +9,14 @@ interface TaskListProps {
 }
 
 const TaskList: React.FC<TaskListProps> = ({ parentId, depth = 0 }) => {
-  const { todos, showCompleted } = useTodoStore();
+  const todos = useTodoStore(state => state.todos);
+  const showCompleted = useTodoStore(state => state.showCompleted);
+
+  // Safety depth limit to prevent infinite loops from corrupt data
+  if (depth > 20) {
+    console.error('TaskList: Maximum depth reached, potential hierarchy loop detected.', { parentId });
+    return null;
+  }
 
   const parentTask = todos.find(t => t.id === parentId);
   const subtaskType = parentTask?.subtaskType || 'list';

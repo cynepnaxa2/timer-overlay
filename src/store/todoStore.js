@@ -37,20 +37,67 @@ function readTodos() {
     // Import initial matrix to ensure it's available for migration
     const { INITIAL_RESOURCE_MATRIX } = require('../config/resources');
 
-    return parsed.map(todo => {
+    const seenIds = new Set();
+    const uniqueTodos = [];
+    
+    for (const todo of parsed) {
+      // Force ID to string
+      if (!todo.id) {
+        const { randomUUID } = require('crypto');
+        todo.id = randomUUID();
+      } else {
+        todo.id = String(todo.id);
+      }
+      
+      // Force parentId to string or null (handle empty string case)
+      if (todo.parentId === undefined || todo.parentId === "" || todo.parentId === "null") {
+        todo.parentId = null;
+      } else if (todo.parentId !== null) {
+        todo.parentId = String(todo.parentId);
+      }
+      
+      if (seenIds.has(todo.id)) {
+        console.warn(`Duplicate todo ID found: ${todo.id}. Generating new ID.`);
+        const { randomUUID } = require('crypto');
+        todo.id = randomUUID();
+      }
+      seenIds.add(todo.id);
+
       if (todo.collapsed === undefined) todo.collapsed = false;
       if (todo.subtaskType === undefined) todo.subtaskType = 'list';
       if (todo.resources === undefined) {
         todo.resources = JSON.parse(JSON.stringify(INITIAL_RESOURCE_MATRIX));
       }
-      return todo;
-    });
+      uniqueTodos.push(todo);
+    }
+
+    return uniqueTodos;
   } catch {
     return [];
   }
 }
 
 function writeTodos(todos) {
+  // #region agent log
+  const logMain = (msg, data = {}, hypothesisId = 'H_IPC_RACE') => {
+    const logEntry = JSON.stringify({
+      id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      timestamp: Date.now(),
+      location: 'src/store/todoStore.js:writeTodos',
+      message: msg,
+      data,
+      sessionId: 'debug-session',
+      hypothesisId
+    }) + '\n';
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
+      fs.appendFileSync(logPath, logEntry);
+    } catch (e) {}
+  };
+  // #endregion
+  logMain('writing todos to disk', { count: todos.length });
   const file = getTodosPath();
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -109,9 +156,32 @@ function createTodo(content, parentId = null, afterId = null) {
 }
 
 function updateTodo(id, updates) {
+  // #region agent log
+  const logMain = (msg, data = {}, hypothesisId = 'H_IPC_RACE') => {
+    const logEntry = JSON.stringify({
+      id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      timestamp: Date.now(),
+      location: 'src/store/todoStore.js:updateTodo',
+      message: msg,
+      data,
+      sessionId: 'debug-session',
+      hypothesisId
+    }) + '\n';
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
+      fs.appendFileSync(logPath, logEntry);
+    } catch (e) {}
+  };
+  // #endregion
+  logMain('updateTodo start', { id, updates });
   const todos = readTodos();
   const index = todos.findIndex(t => t.id === id);
-  if (index === -1) return null;
+  if (index === -1) {
+    logMain('updateTodo: task not found', { id });
+    return null;
+  }
   
   const updated = { ...todos[index], ...updates };
   
@@ -120,9 +190,6 @@ function updateTodo(id, updates) {
     const gain = updated.economics.gain || 0;
     updated.economics.roi = cost > 0 ? gain / cost : gain;
   }
-
-  // Priority score calculation could go here, but we'll do it in the renderer for now 
-  // or add it as a utility.
 
   todos[index] = updated;
   writeTodos(todos);
@@ -147,14 +214,39 @@ function deleteTodo(id) {
 }
 
 function reorderTodos(todoIds) {
+  // #region agent log
+  const logMain = (msg, data = {}, hypothesisId = 'H_IPC_RACE') => {
+    const logEntry = JSON.stringify({
+      id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      timestamp: Date.now(),
+      location: 'src/store/todoStore.js:reorderTodos',
+      message: msg,
+      data,
+      sessionId: 'debug-session',
+      hypothesisId
+    }) + '\n';
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
+      fs.appendFileSync(logPath, logEntry);
+    } catch (e) {}
+  };
+  // #endregion
+  logMain('reorderTodos start', { todoIds });
   const todos = readTodos();
-  const todoMap = new Map(todos.map(t => [t.id, t]));
-  todoIds.forEach((id, index) => {
-    if (todoMap.has(id)) todoMap.get(id).order = index;
+  
+  const siblingSet = new Set(todoIds);
+  let orderMap = new Map(todoIds.map((id, index) => [id, index]));
+  
+  todos.forEach(t => {
+    if (siblingSet.has(t.id)) {
+      t.order = orderMap.get(t.id);
+    }
   });
-  const reordered = Array.from(todoMap.values());
-  writeTodos(reordered);
-  return reordered;
+  
+  writeTodos(todos);
+  return todos;
 }
 
 function loadTodosFromFile(filePath) {
@@ -198,6 +290,92 @@ function ensureDemoTodos() {
   writeTodos(demoTodos);
 }
 
+function moveTodo(draggingId, targetId, position) {
+  // #region agent log
+  const logMain = (msg, data = {}, hypothesisId = 'H_ROBUST_MOVE') => {
+    const logEntry = JSON.stringify({
+      id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      timestamp: Date.now(),
+      location: 'src/store/todoStore.js:moveTodo',
+      message: msg,
+      data,
+      sessionId: 'debug-session',
+      hypothesisId
+    }) + '\n';
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logPath = path.join(process.cwd(), '.cursor', 'debug.log');
+      fs.appendFileSync(logPath, logEntry);
+    } catch (e) {}
+  };
+  // #endregion
+  
+  logMain('moveTodo request received', { draggingId, targetId, position });
+  const todos = readTodos();
+  
+  // Ensure we are working with strings
+  const dId = String(draggingId);
+  const tId = String(targetId);
+  
+  const draggingTask = todos.find(t => t.id === dId);
+  const targetTask = todos.find(t => t.id === tId);
+  
+  if (!draggingTask || !targetTask || dId === tId) {
+    logMain('moveTodo validation failed', { hasDragging: !!draggingTask, hasTarget: !!targetTask, sameId: dId === tId });
+    return todos;
+  }
+
+  // Hierarchy check to prevent cycles
+  function isDescendant(ancestorId, taskId) {
+    const t = todos.find(x => x.id === taskId);
+    if (!t || !t.parentId) return false;
+    if (t.parentId === ancestorId) return true;
+    return isDescendant(ancestorId, t.parentId);
+  }
+
+  if (isDescendant(dId, tId)) {
+    logMain('moveTodo rejected: cycle detected');
+    return todos;
+  }
+
+  const isInside = position === 'middle';
+  const isAfter = position === 'bottom';
+  
+  const newParentId = isInside ? targetTask.id : targetTask.parentId;
+  
+  // 1. Update the parentId of the dragging task
+  draggingTask.parentId = newParentId;
+  
+  // 2. Re-calculate order for all siblings of the new parent
+  // We include ALL siblings (even completed ones) to avoid collisions
+  const siblings = todos
+    .filter(t => t.parentId === newParentId && t.id !== dId)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+  let insertIndex;
+  if (isInside) {
+    insertIndex = siblings.length; // Drop into the end of child list
+  } else {
+    insertIndex = siblings.findIndex(t => t.id === tId);
+    if (isAfter) insertIndex++;
+  }
+  
+  if (insertIndex === -1) insertIndex = siblings.length;
+  
+  // Insert the task at the calculated position
+  siblings.splice(insertIndex, 0, draggingTask);
+  
+  // Update order property for all siblings
+  siblings.forEach((task, index) => {
+    task.order = index;
+  });
+  
+  logMain('moveTodo successful', { newParentId, insertIndex });
+  writeTodos(todos);
+  return todos;
+}
+
 module.exports = {
   readTodos,
   writeTodos,
@@ -205,6 +383,7 @@ module.exports = {
   updateTodo,
   deleteTodo,
   reorderTodos,
+  moveTodo,
   loadTodosFromFile,
   ensureDemoTodos
 };

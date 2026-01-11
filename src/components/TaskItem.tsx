@@ -15,24 +15,26 @@ interface TaskItemProps {
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ todo, depth, isLast }) => {
-  const { 
-    activeTaskId, 
-    setActiveTaskId, 
-    updateTodo, 
-    createTodo, 
-    deleteTodo, 
-    toggleCollapse, 
-    toggleSubtaskType,
-    todos,
-    showCompleted,
-    dropZone,
-    setDropZone,
-    draggingTaskId,
-    setDraggingTaskId,
-    dragOverTaskId,
-    setDragOverTaskId,
-    handleTaskDrop
-  } = useTodoStore();
+  const activeTaskId = useTodoStore(state => state.activeTaskId);
+  const setActiveTaskId = useTodoStore(state => state.setActiveTaskId);
+  const updateTodo = useTodoStore(state => state.updateTodo);
+  const createTodo = useTodoStore(state => state.createTodo);
+  const deleteTodo = useTodoStore(state => state.deleteTodo);
+  const toggleCollapse = useTodoStore(state => state.toggleCollapse);
+  const toggleSubtaskType = useTodoStore(state => state.toggleSubtaskType);
+  const showCompleted = useTodoStore(state => state.showCompleted);
+  const draggingTaskId = useTodoStore(state => state.draggingTaskId);
+  const setDraggingTaskId = useTodoStore(state => state.setDraggingTaskId);
+  const dragOverTaskId = useTodoStore(state => state.dragOverTaskId);
+  const setDragOverTaskId = useTodoStore(state => state.setDragOverTaskId);
+  const handleTaskDrop = useTodoStore(state => state.handleTaskDrop);
+  const setDropZone = useTodoStore(state => state.setDropZone);
+
+  const hasChildren = useTodoStore(state => 
+    state.todos.some(t => t.parentId === todo.id && (state.showCompleted || !t.completed))
+  );
+
+  const dropZone = useTodoStore(state => state.dragOverTaskId === todo.id ? state.dropZone : null);
   
   const contentRef = useRef<HTMLDivElement>(null);
   const taskRef = useRef<HTMLDivElement>(null);
@@ -113,7 +115,9 @@ const TaskItem: React.FC<TaskItemProps> = ({ todo, depth, isLast }) => {
     const draggedId = draggingTaskId;
     const currentDropZone = dropZone;
     
-    console.log('Drop event:', { draggedId, targetId: todo.id, currentDropZone });
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/f23b35c1-164f-4809-ab92-7ad83d07b816',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'TaskItem.tsx:116',message:'handleDrop triggered',data:{draggedId, targetId: todo.id, currentDropZone},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H_DROP_INDEX_MISMATCH'})}).catch(()=>{});
+    // #endregion
 
     if (draggedId && draggedId !== todo.id && currentDropZone) {
       await handleTaskDrop(draggedId, todo.id, currentDropZone);
@@ -130,7 +134,6 @@ const TaskItem: React.FC<TaskItemProps> = ({ todo, depth, isLast }) => {
     bottom: dropZone === 'bottom' ? 'drag-over-bottom' : '',
   } : { top: '', middle: '', bottom: '' };
   
-  const hasChildren = todos.some(t => t.parentId === todo.id && (showCompleted || !t.completed));
   const resources = todo.resources || INITIAL_RESOURCE_MATRIX;
   const priorityScore = calculatePriorityScore(resources);
 
