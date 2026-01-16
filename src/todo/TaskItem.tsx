@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Todo } from '../types';
@@ -21,7 +21,7 @@ interface Props {
   dropZone: DropZone;
 }
 
-export const TaskItem: React.FC<Props> = ({ task, depth, dropZone }) => {
+export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone }) => {
   const { updateTodo, deleteTodo, todos, addTodo } = useTodoStore();
   const {
     attributes,
@@ -46,7 +46,7 @@ export const TaskItem: React.FC<Props> = ({ task, depth, dropZone }) => {
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="group flex flex-col mb-0.5 relative"
+      className="group flex flex-col mb-0.5 relative select-none"
     >
       {/* Top/Bottom Drop Indicators */}
       {dropZone === 'top' && (
@@ -91,40 +91,40 @@ export const TaskItem: React.FC<Props> = ({ task, depth, dropZone }) => {
               addTodo('', task.id);
               updateTodo(task.id, { collapsed: false });
             }}
-            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors"
+            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors active:scale-90"
             title="Add Subtask"
           >
             <Plus className="w-4 h-4" />
           </button>
           <button 
-            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors"
+            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors active:scale-90"
             title="Start Timer"
           >
             <Play className="w-4 h-4" />
           </button>
           <button 
             onClick={() => updateTodo(task.id, { completed: !task.completed })}
-            className={`p-1.5 hover:bg-white/10 rounded transition-colors ${task.completed ? 'text-green-500' : 'text-slate-400 hover:text-green-500'}`}
+            className={`p-1.5 hover:bg-white/10 rounded transition-colors active:scale-90 ${task.completed ? 'text-green-500' : 'text-slate-400 hover:text-green-500'}`}
             title="Complete"
           >
             <Check className="w-4 h-4" />
           </button>
           <button 
             onClick={() => deleteTodo(task.id)}
-            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-red-500 rounded transition-colors"
+            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-red-500 rounded transition-colors active:scale-90"
             title="Delete"
             aria-label="Delete"
           >
             <X className="w-4 h-4" />
           </button>
           <button 
-            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors"
+            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors active:scale-90"
             title="Indent"
           >
             <CornerDownRight className="w-4 h-4" />
           </button>
           <button 
-            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors"
+            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors active:scale-90"
             title="Toggle View"
           >
             <div className="w-4 h-4 flex flex-col items-center justify-center gap-0.5">
@@ -136,4 +136,4 @@ export const TaskItem: React.FC<Props> = ({ task, depth, dropZone }) => {
       </div>
     </div>
   );
-};
+});

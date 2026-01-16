@@ -33,7 +33,7 @@ describe('OverlayWindow', () => {
     })
     
     const { container } = render(<OverlayWindow />)
-    const styleTag = container.querySelector('style')
-    expect(styleTag?.innerHTML).toContain('animation: rise 120s linear infinite')
+    const timerDiv = container.querySelector('.crawling-timer') as HTMLElement
+    expect(timerDiv.style.animation).toBe('rise 120s linear infinite')
   })
 })

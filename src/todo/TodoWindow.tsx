@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   DndContext, 
   closestCenter,
@@ -8,7 +8,6 @@ import {
   useSensors,
   DragEndEvent,
   DragMoveEvent,
-  DragStartEvent
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -23,7 +22,21 @@ import { Todo } from '../types';
 
 export type DropZone = 'top' | 'center' | 'bottom' | null;
 
-export const TodoWindow = () => {
+// Helper to flatten the hierarchy for dnd-kit (Moved outside to avoid re-creation)
+const getFlattenedTasks = (allTodos: Todo[], parentId: string | null = null, depth = 0): (Todo & { depth: number })[] => {
+  return allTodos
+    .filter(t => t.parentId === parentId)
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .reduce((acc, task) => {
+      acc.push({ ...task, depth });
+      if (!task.collapsed) {
+        acc.push(...getFlattenedTasks(allTodos, task.id, depth + 1));
+      }
+      return acc;
+    }, [] as (Todo & { depth: number })[]);
+};
+
+export const TodoWindow: React.FC = () => {
   const { todos, reorderTodos, addTodo, updateTodo } = useTodoStore();
   const [activeDrop, setActiveDrop] = useState<{ id: string; zone: DropZone } | null>(null);
 
@@ -34,22 +47,9 @@ export const TodoWindow = () => {
     })
   );
 
-  const getFlattenedTasks = (allTodos: Todo[], parentId: string | null = null, depth = 0): (Todo & { depth: number })[] => {
-    return allTodos
-      .filter(t => t.parentId === parentId)
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .reduce((acc, task) => {
-        acc.push({ ...task, depth });
-        if (!task.collapsed) {
-          acc.push(...getFlattenedTasks(allTodos, task.id, depth + 1));
-        }
-        return acc;
-      }, [] as (Todo & { depth: number })[]);
-  };
+  const flattenedTasks = useMemo(() => getFlattenedTasks(todos), [todos]);
 
-  const flattenedTasks = getFlattenedTasks(todos);
-
-  const calculateZone = (event: DragMoveEvent | DragEndEvent): DropZone => {
+  const calculateZone = useCallback((event: DragMoveEvent | DragEndEvent): DropZone => {
     const { active, over } = event;
     if (!over || active.id === over.id) return null;
 
@@ -64,9 +64,9 @@ export const TodoWindow = () => {
     if (relativeY < overHeight * 0.33) return 'top';
     if (relativeY > overHeight * 0.66) return 'bottom';
     return 'center';
-  };
+  }, []);
 
-  const handleDragMove = (event: DragMoveEvent) => {
+  const handleDragMove = useCallback((event: DragMoveEvent) => {
     const { over } = event;
     if (over) {
       const zone = calculateZone(event);
@@ -74,9 +74,9 @@ export const TodoWindow = () => {
     } else {
       setActiveDrop(null);
     }
-  };
+  }, [calculateZone]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     setActiveDrop(null);
 
@@ -111,19 +111,21 @@ export const TodoWindow = () => {
         }
       }
     }
-  };
+  }, [todos, calculateZone, updateTodo, reorderTodos]);
+
+  const onDragCancel = useCallback(() => setActiveDrop(null), []);
 
   return (
     <div className="bg-[#0f0f0f]/95 text-slate-200 min-h-screen font-sans">
       <div className="flex items-center gap-1 p-2 bg-[#1a1a1a] border-b border-[#2a2a2a] sticky top-0 z-20">
         <button 
           onClick={() => addTodo('')}
-          className="p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full transition-colors"
+          className="p-1.5 bg-blue-600 hover:bg-blue-500 rounded-full transition-colors active:scale-95"
           aria-label="New Task"
         >
           <Plus className="w-4 h-4 text-white" />
         </button>
-        <button className="p-1.5 hover:bg-white/10 rounded-full transition-colors ml-1">
+        <button className="p-1.5 hover:bg-white/10 rounded-full transition-colors ml-1 active:scale-95">
           <Check className="w-4 h-4 text-slate-400" />
         </button>
       </div>
@@ -134,7 +136,7 @@ export const TodoWindow = () => {
           collisionDetection={closestCenter}
           onDragMove={handleDragMove}
           onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveDrop(null)}
+          onDragCancel={onDragCancel}
         >
           <SortableContext 
             items={flattenedTasks.map(t => t.id)}
@@ -154,7 +156,7 @@ export const TodoWindow = () => {
         </DndContext>
         
         {todos.length === 0 && (
-          <div className="p-8 text-slate-500 text-sm">
+          <div className="p-8 text-slate-500 text-sm text-center italic">
             No tasks yet. Create one to get started!
           </div>
         )}

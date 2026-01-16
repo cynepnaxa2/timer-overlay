@@ -12,10 +12,9 @@ interface TodoState {
 }
 
 const generateId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return Math.random().toString(36).substring(2, 15);
+  return typeof crypto !== 'undefined' && crypto.randomUUID 
+    ? crypto.randomUUID() 
+    : Math.random().toString(36).substring(2, 15);
 };
 
 export const useTodoStore = create<TodoState>((set, get) => ({
@@ -34,12 +33,12 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       const afterTaskIndex = newTodos.findIndex(t => t.id === afterId);
       if (afterTaskIndex !== -1) {
         newOrder = (newTodos[afterTaskIndex].order || 0) + 1;
-        for (let i = 0; i < newTodos.length; i++) {
-          const t = newTodos[i];
+        // Optimization: Single pass for order shifting
+        newTodos.forEach((t, i) => {
           if (t.parentId === parentId && (t.order || 0) >= newOrder) {
             newTodos[i] = { ...t, order: (t.order || 0) + 1 };
           }
-        }
+        });
       } else {
         newOrder = siblings.length > 0 ? Math.max(...siblings.map(t => t.order || 0)) + 1 : 0;
       }
@@ -81,12 +80,11 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     const { todos } = get();
     const toDelete = new Set<string>();
     
+    // Recursive ID collection
     const collectIds = (targetId: string) => {
       toDelete.add(targetId);
       todos.forEach(t => {
-        if (t.parentId === targetId) {
-          collectIds(t.id);
-        }
+        if (t.parentId === targetId) collectIds(t.id);
       });
     };
     
@@ -102,8 +100,8 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     const todoMap = new Map(todos.map(t => [t.id, t]));
     
     todoIds.forEach((id, index) => {
-      if (todoMap.has(id)) {
-        const todo = todoMap.get(id)!;
+      const todo = todoMap.get(id);
+      if (todo) {
         todoMap.set(id, { ...todo, order: index });
       }
     });
