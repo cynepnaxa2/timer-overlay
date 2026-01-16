@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { 
   DndContext, 
   closestCenter,
@@ -22,7 +22,6 @@ import { Todo } from '../types';
 
 export type DropZone = 'top' | 'center' | 'bottom' | null;
 
-// Helper to flatten the hierarchy for dnd-kit (Moved outside to avoid re-creation)
 const getFlattenedTasks = (allTodos: Todo[], parentId: string | null = null, depth = 0): (Todo & { depth: number })[] => {
   return allTodos
     .filter(t => t.parentId === parentId)
@@ -37,8 +36,15 @@ const getFlattenedTasks = (allTodos: Todo[], parentId: string | null = null, dep
 };
 
 export const TodoWindow: React.FC = () => {
-  const { todos, reorderTodos, addTodo, updateTodo } = useTodoStore();
+  const { todos, isLoaded, reorderTodos, addTodo, updateTodo, loadTodosAction } = useTodoStore();
   const [activeDrop, setActiveDrop] = useState<{ id: string; zone: DropZone } | null>(null);
+
+  // Initial load
+  useEffect(() => {
+    if (!isLoaded) {
+      loadTodosAction();
+    }
+  }, [isLoaded, loadTodosAction]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -114,6 +120,10 @@ export const TodoWindow: React.FC = () => {
   }, [todos, calculateZone, updateTodo, reorderTodos]);
 
   const onDragCancel = useCallback(() => setActiveDrop(null), []);
+
+  if (!isLoaded) {
+    return <div className="bg-[#0f0f0f] text-slate-500 p-8 text-center h-screen">Loading tasks...</div>;
+  }
 
   return (
     <div className="bg-[#0f0f0f]/95 text-slate-200 min-h-screen font-sans">

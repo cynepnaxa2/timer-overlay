@@ -4,12 +4,16 @@ import { Todo, Settings } from '../types';
 export const saveTodos = async (todos: Todo[]): Promise<void> => {
   if (window.todoApi) {
     return window.todoApi.saveTodos(todos);
+  } else {
+    console.error('saveTodos: window.todoApi is missing!');
   }
 };
 
 export const loadTodos = async (): Promise<Todo[]> => {
   if (window.todoApi) {
     return window.todoApi.loadTodos();
+  } else {
+    console.error('loadTodos: window.todoApi is missing!');
   }
   return [];
 };

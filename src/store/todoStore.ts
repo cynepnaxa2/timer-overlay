@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { Todo } from '../types';
-import { saveTodos } from '../utils/ipc';
+import { saveTodos, loadTodos } from '../utils/ipc';
 
 interface TodoState {
   todos: Todo[];
+  isLoaded: boolean;
   setTodos: (todos: Todo[]) => void;
+  loadTodosAction: () => Promise<void>;
   addTodo: (content: string, parentId?: string | null, afterId?: string | null) => Todo;
   updateTodo: (id: string, updates: Partial<Todo>) => void;
   deleteTodo: (id: string) => void;
@@ -19,8 +21,16 @@ const generateId = () => {
 
 export const useTodoStore = create<TodoState>((set, get) => ({
   todos: [],
+  isLoaded: false,
   
-  setTodos: (todos) => set({ todos }),
+  setTodos: (todos) => set({ todos, isLoaded: true }),
+
+  loadTodosAction: async () => {
+    console.log('Store: loadTodosAction start');
+    const todos = await loadTodos();
+    console.log('Store: loadTodosAction finished, todos count:', todos.length);
+    set({ todos, isLoaded: true });
+  },
   
   addTodo: (content, parentId = null, afterId = null) => {
     const { todos } = get();
@@ -33,7 +43,6 @@ export const useTodoStore = create<TodoState>((set, get) => ({
       const afterTaskIndex = newTodos.findIndex(t => t.id === afterId);
       if (afterTaskIndex !== -1) {
         newOrder = (newTodos[afterTaskIndex].order || 0) + 1;
-        // Optimization: Single pass for order shifting
         newTodos.forEach((t, i) => {
           if (t.parentId === parentId && (t.order || 0) >= newOrder) {
             newTodos[i] = { ...t, order: (t.order || 0) + 1 };
@@ -80,7 +89,6 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     const { todos } = get();
     const toDelete = new Set<string>();
     
-    // Recursive ID collection
     const collectIds = (targetId: string) => {
       toDelete.add(targetId);
       todos.forEach(t => {

@@ -65,7 +65,7 @@ function createOverlayWindow() {
       nodeIntegration: false,
       sandbox: true,
       devTools: false,
-      preload: path.join(__dirname, 'preload', 'overlayPreload.js')
+      preload: path.resolve(__dirname, '../../dist-electron/overlayPreload.js')
     }
   });
 
@@ -163,7 +163,9 @@ function createSettingsWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(__dirname, 'preload', 'settingsPreload.js')
+      preload: process.env.VITE_DEV_SERVER_URL
+        ? path.join(process.cwd(), 'dist-electron', 'settingsPreload.js')
+        : path.join(__dirname, 'settingsPreload.js')
     }
   });
   state.settingsWindow.once('ready-to-show', () => state.settingsWindow.show());
@@ -194,7 +196,9 @@ function createTodoWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(__dirname, 'preload', 'todoPreload.js'),
+      preload: process.env.VITE_DEV_SERVER_URL
+        ? path.join(process.cwd(), 'dist-electron', 'todoPreload.js')
+        : path.join(__dirname, 'todoPreload.js'),
       spellcheck: false,
       devTools: true
     }
