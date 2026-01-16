@@ -51,32 +51,36 @@ export const TodoWindow = () => {
       const overTask = todos.find(t => t.id === over.id);
       
       if (activeTask && overTask) {
-        const oldParentId = activeTask.parentId;
-        const newParentId = overTask.parentId;
+        const overRect = over.rect;
+        const activeRect = active.rect.current.translated;
+        if (!activeRect) return;
 
-        // Get all siblings in the target parent group
-        const targetSiblings = todos
-          .filter(t => t.parentId === newParentId)
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        const activeCenterY = activeRect.top + activeRect.height / 2;
+        const relativeY = activeCenterY - overRect.top;
+        const overHeight = overRect.height;
 
-        if (oldParentId === newParentId) {
-          // Case 1: Moving within the same parent - use arrayMove
-          const oldIndex = targetSiblings.findIndex(t => t.id === active.id);
-          const newIndex = targetSiblings.findIndex(t => t.id === over.id);
-          const reordered = arrayMove(targetSiblings, oldIndex, newIndex);
-          reorderTodos(reordered.map(t => t.id));
+        if (relativeY > overHeight * 0.33 && relativeY < overHeight * 0.66) {
+          // --- DROP IN CENTER (33-66%) -> MAKE SUBTASK ---
+          updateTodo(activeTask.id, { parentId: overTask.id, order: 0 });
+          updateTodo(overTask.id, { collapsed: false });
         } else {
-          // Case 2: Moving to a different parent
-          updateTodo(activeTask.id, { parentId: newParentId });
-          
+          // --- DROP IN EDGES -> MAKE SIBLING ---
+          const newParentId = overTask.parentId;
+          const isAfter = relativeY >= overHeight * 0.66;
+
+          // Update parent immediately
+          if (activeTask.parentId !== newParentId) {
+            updateTodo(activeTask.id, { parentId: newParentId });
+          }
+
+          // Get fresh siblings list for reordering
+          const targetSiblings = todos
+            .filter(t => t.parentId === newParentId && t.id !== activeTask.id)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
           const overIndex = targetSiblings.findIndex(t => t.id === overTask.id);
           const reordered = [...targetSiblings];
-          
-          // Determine if we should insert before or after based on visual flattened list
-          const activeFlattenedIndex = flattenedTasks.findIndex(t => t.id === active.id);
-          const overFlattenedIndex = flattenedTasks.findIndex(t => t.id === over.id);
-          
-          const insertAt = overFlattenedIndex > activeFlattenedIndex ? overIndex + 1 : overIndex;
+          const insertAt = isAfter ? overIndex + 1 : overIndex;
           
           reordered.splice(insertAt, 0, activeTask);
           reorderTodos(reordered.map(t => t.id));
