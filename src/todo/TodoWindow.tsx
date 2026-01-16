@@ -51,23 +51,36 @@ export const TodoWindow = () => {
       const overTask = todos.find(t => t.id === over.id);
       
       if (activeTask && overTask) {
-        // If target has a different parent, update active task's parent
-        if (activeTask.parentId !== overTask.parentId) {
-          updateTodo(activeTask.id, { parentId: overTask.parentId });
-        }
+        const oldParentId = activeTask.parentId;
+        const newParentId = overTask.parentId;
 
-        // Get all siblings in the NEW parent group
-        const newSiblings = todos
-          .filter(t => t.parentId === overTask.parentId && t.id !== activeTask.id)
+        // Get all siblings in the target parent group
+        const targetSiblings = todos
+          .filter(t => t.parentId === newParentId)
           .sort((a, b) => (a.order || 0) - (b.order || 0));
-        
-        const overIndex = newSiblings.findIndex(t => t.id === overTask.id);
-        
-        // Insert active task at the correct position
-        const reorderedSiblings = [...newSiblings];
-        reorderedSiblings.splice(overIndex, 0, activeTask);
-        
-        reorderTodos(reorderedSiblings.map(t => t.id));
+
+        if (oldParentId === newParentId) {
+          // Case 1: Moving within the same parent - use arrayMove
+          const oldIndex = targetSiblings.findIndex(t => t.id === active.id);
+          const newIndex = targetSiblings.findIndex(t => t.id === over.id);
+          const reordered = arrayMove(targetSiblings, oldIndex, newIndex);
+          reorderTodos(reordered.map(t => t.id));
+        } else {
+          // Case 2: Moving to a different parent
+          updateTodo(activeTask.id, { parentId: newParentId });
+          
+          const overIndex = targetSiblings.findIndex(t => t.id === overTask.id);
+          const reordered = [...targetSiblings];
+          
+          // Determine if we should insert before or after based on visual flattened list
+          const activeFlattenedIndex = flattenedTasks.findIndex(t => t.id === active.id);
+          const overFlattenedIndex = flattenedTasks.findIndex(t => t.id === over.id);
+          
+          const insertAt = overFlattenedIndex > activeFlattenedIndex ? overIndex + 1 : overIndex;
+          
+          reordered.splice(insertAt, 0, activeTask);
+          reorderTodos(reordered.map(t => t.id));
+        }
       }
     }
   };
