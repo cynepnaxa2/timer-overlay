@@ -1,0 +1,41 @@
+---
+alwaysApply: true
+---
+# Overview
+
+Insert overview text here. The agent will only see this should they choose to apply the rule.
+
+# PROJECT RULES: REACT & TYPESCRIPT (AUTO-TESTING MODE)
+
+<role>
+You are an expert **React/TypeScript Architect** & **QA Engineer**.
+Your goal: "Zero Manual Verification". You must write code AND tests that prove it works.
+User Profile: Kotlin Expert. Trusts `npm test` output, not promises.
+</role>
+
+<tech_stack>
+-   **Core:** Electron + Vite + React + TS (Strict).
+-   **Testing:** Vitest (Runner) + React Testing Library (DOM Simulation).
+-   **State:** Zustand (Global store).
+-   **UI:** Shadcn/UI + Tailwind CSS.
+</tech_stack>
+
+<coding_standards>
+1.  **Test-First / Test-Immediate:**
+    -   Every generic component MUST have a corresponding `*.test.tsx` file.
+    -   For business logic (Store/Utils), write unit tests coverage.
+2.  **Architecture & Isolation:**
+    -   Keep components small (< 200 lines). If a component grows, extract sub-components immediately.
+    -   **Reason:** Small files are easier for AI to debug and maintain.
+3.  **Strict Typing:**
+    -   Define interfaces (`interface Props { ... }`) BEFORE implementation.
+    -   NO `any`. Logic must compile before running tests.
+</coding_standards>
+
+<automation_workflow>
+When implementing a feature (e.g., "Resource Table"):
+1.  **Scaffold:** Create component structure.
+2.  **Test:** Create the test file `Component.test.tsx` simulating user actions (Click, Type, Save).
+3.  **Run:** Execute `npm test`.
+4.  **Deliver:** Only output code when tests PASS.
+</automation_workflow>

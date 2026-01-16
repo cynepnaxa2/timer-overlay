@@ -1,12 +1,26 @@
 const { ipcMain, app, dialog, globalShortcut } = require('electron');
 const state = require('./state');
-const { readSettings, writeSettings } = require('../store/settingsStore');
+const { readSettings, writeSettings } = require('../store/settingsStore.js.legacy');
 const { getMode, getAllModes, serializeMode } = require('../config/modes');
 const { getFormattedCounter, resetDisplayCounters } = require('../utils/counters');
 const todoService = require('../services/todoService');
 const path = require('path');
 
 function registerIpcHandlers(windowManager, timerManager, trayManager) {
+  ipcMain.handle('save-todos', (_event, todos) => {
+    todoService.saveTodos(todos);
+    notifyTodosUpdated();
+    return true;
+  });
+
+  ipcMain.handle('save-settings', (_event, settings) => {
+    state.currentSettings = writeSettings(settings);
+    if (state.settingsWindow && !state.settingsWindow.isDestroyed()) {
+      state.settingsWindow.webContents.send('settings-updated', state.currentSettings);
+    }
+    return true;
+  });
+
   ipcMain.handle('get-settings', () => {
     if (!state.currentSettings) state.currentSettings = readSettings();
     return state.currentSettings;

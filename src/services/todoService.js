@@ -1,8 +1,12 @@
-const todoStore = require('../store/todoStore');
+const todoStore = require('../store/todoStore.js.legacy');
 
 const TodoService = {
   getTodos() {
     return todoStore.readTodos();
+  },
+
+  saveTodos(todos) {
+    return todoStore.writeTodos(todos);
   },
 
   createTodo(content, parentId, afterId) {
@@ -46,4 +50,3 @@ const TodoService = {
 };
 
 module.exports = TodoService;
-

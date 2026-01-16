@@ -5,7 +5,7 @@ const { randomUUID } = require('crypto');
 
 function getTodosPath() {
   // Use settingsStore to check for custom sync path
-  const { readSettings } = require('./settingsStore');
+  const { readSettings } = require('./settingsStore.js.legacy');
   const settings = readSettings();
   
   if (settings.syncFolderPath && fs.existsSync(settings.syncFolderPath)) {

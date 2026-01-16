@@ -2,7 +2,7 @@ const path = require('path');
 const { BrowserWindow, screen, globalShortcut, app, dialog } = require('electron');
 const state = require('./state');
 const { computeWindowBoundsForRightEdge } = require('../utils/positioning');
-const { readSettings, writeSettings } = require('../store/settingsStore');
+const { readSettings, writeSettings } = require('../store/settingsStore.js.legacy');
 const { buildOverlayCssVariables } = require('../utils/style');
 const { getMode, serializeMode } = require('../config/modes');
 const { getFormattedCounter } = require('../utils/counters');
@@ -65,7 +65,7 @@ function createOverlayWindow() {
       nodeIntegration: false,
       sandbox: true,
       devTools: false,
-      preload: path.join(__dirname, '..', '..', 'preload', 'overlayPreload.js')
+      preload: path.join(__dirname, 'preload', 'overlayPreload.js')
     }
   });
 
@@ -94,7 +94,11 @@ function createOverlayWindow() {
     state.mainWindow = null;
   });
 
-  state.mainWindow.loadFile(path.join(__dirname, '..', '..', 'index.html'));
+  if (process.env.VITE_DEV_SERVER_URL) {
+    state.mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+  } else {
+    state.mainWindow.loadFile(path.join(__dirname, '..', '..', 'dist', 'index.html'));
+  }
 }
 
 async function applyOverlayStyles() {
@@ -159,14 +163,18 @@ function createSettingsWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(__dirname, '..', '..', 'preload', 'settingsPreload.js')
+      preload: path.join(__dirname, 'preload', 'settingsPreload.js')
     }
   });
   state.settingsWindow.once('ready-to-show', () => state.settingsWindow.show());
   state.settingsWindow.on('closed', () => {
     state.settingsWindow = null;
   });
-  state.settingsWindow.loadFile(path.join(__dirname, '..', '..', 'settings.html'));
+  if (process.env.VITE_DEV_SERVER_URL) {
+    state.settingsWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}settings.html`);
+  } else {
+    state.settingsWindow.loadFile(path.join(__dirname, '..', '..', 'dist', 'settings.html'));
+  }
 }
 
 function createTodoWindow() {
@@ -186,7 +194,7 @@ function createTodoWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(__dirname, '..', '..', 'preload', 'todoPreload.js'),
+      preload: path.join(__dirname, 'preload', 'todoPreload.js'),
       spellcheck: false,
       devTools: true
     }
@@ -241,7 +249,11 @@ function createTodoWindow() {
     state.todoWindow = null;
   });
   
-  state.todoWindow.loadFile(path.join(__dirname, '..', '..', 'todo.html'));
+  if (process.env.VITE_DEV_SERVER_URL) {
+    state.todoWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}todo.html`);
+  } else {
+    state.todoWindow.loadFile(path.join(__dirname, '..', '..', 'dist', 'todo.html'));
+  }
 }
 
 module.exports = {

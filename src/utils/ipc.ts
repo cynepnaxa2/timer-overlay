@@ -1,0 +1,28 @@
+import { Todo, Settings } from '../types';
+
+// These are mockable IPC calls
+export const saveTodos = async (todos: Todo[]): Promise<void> => {
+  if (window.todoApi) {
+    return window.todoApi.saveTodos(todos);
+  }
+};
+
+export const loadTodos = async (): Promise<Todo[]> => {
+  if (window.todoApi) {
+    return window.todoApi.loadTodos();
+  }
+  return [];
+};
+
+export const saveSettings = async (settings: Settings): Promise<void> => {
+  if (window.settingsApi) {
+    return window.settingsApi.saveSettings(settings);
+  }
+};
+
+export const loadSettings = async (): Promise<Settings | null> => {
+  if (window.settingsApi) {
+    return window.settingsApi.loadSettings();
+  }
+  return null;
+};

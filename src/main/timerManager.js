@@ -1,7 +1,7 @@
 const state = require('./state');
 const { getMode, serializeMode } = require('../config/modes');
 const { updateCounter, getFormattedCounter, resetDisplayCounters } = require('../utils/counters');
-const { writeSettings, readSettings } = require('../store/settingsStore');
+const { writeSettings, readSettings } = require('../store/settingsStore.js.legacy');
 const { globalShortcut } = require('electron');
 
 function startCounterTimer() {

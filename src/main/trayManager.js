@@ -1,7 +1,7 @@
 const { Tray, Menu, nativeImage, app } = require('electron');
 const state = require('./state');
 const { createTrayIcon } = require('../utils/trayIcon');
-const { readSettings } = require('../store/settingsStore');
+const { readSettings } = require('../store/settingsStore.js.legacy');
 
 function createTray(createTodoWindow, createSettingsWindow) {
   if (!state.currentSettings) state.currentSettings = readSettings();
