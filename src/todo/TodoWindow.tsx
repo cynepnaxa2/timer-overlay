@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   DndContext, 
   closestCenter,
@@ -6,7 +6,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
+  DragEndEvent,
+  DragMoveEvent,
+  DragStartEvent
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -19,8 +21,12 @@ import { TaskItem } from './TaskItem';
 import { Plus, Check } from 'lucide-react';
 import { Todo } from '../types';
 
+export type DropZone = 'top' | 'center' | 'bottom' | null;
+
 export const TodoWindow = () => {
   const { todos, reorderTodos, addTodo, updateTodo } = useTodoStore();
+  const [activeDrop, setActiveDrop] = useState<{ id: string; zone: DropZone } | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -28,7 +34,6 @@ export const TodoWindow = () => {
     })
   );
 
-  // Helper to flatten the hierarchy for dnd-kit
   const getFlattenedTasks = (allTodos: Todo[], parentId: string | null = null, depth = 0): (Todo & { depth: number })[] => {
     return allTodos
       .filter(t => t.parentId === parentId)
@@ -44,36 +49,55 @@ export const TodoWindow = () => {
 
   const flattenedTasks = getFlattenedTasks(todos);
 
+  const calculateZone = (event: DragMoveEvent | DragEndEvent): DropZone => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return null;
+
+    const overRect = over.rect;
+    const activeRect = active.rect.current.translated;
+    if (!activeRect) return null;
+
+    const activeCenterY = activeRect.top + activeRect.height / 2;
+    const relativeY = activeCenterY - overRect.top;
+    const overHeight = overRect.height;
+
+    if (relativeY < overHeight * 0.33) return 'top';
+    if (relativeY > overHeight * 0.66) return 'bottom';
+    return 'center';
+  };
+
+  const handleDragMove = (event: DragMoveEvent) => {
+    const { over } = event;
+    if (over) {
+      const zone = calculateZone(event);
+      setActiveDrop({ id: over.id as string, zone });
+    } else {
+      setActiveDrop(null);
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveDrop(null);
+
     if (over && active.id !== over.id) {
       const activeTask = todos.find(t => t.id === active.id);
       const overTask = todos.find(t => t.id === over.id);
       
       if (activeTask && overTask) {
-        const overRect = over.rect;
-        const activeRect = active.rect.current.translated;
-        if (!activeRect) return;
+        const zone = calculateZone(event);
 
-        const activeCenterY = activeRect.top + activeRect.height / 2;
-        const relativeY = activeCenterY - overRect.top;
-        const overHeight = overRect.height;
-
-        if (relativeY > overHeight * 0.33 && relativeY < overHeight * 0.66) {
-          // --- DROP IN CENTER (33-66%) -> MAKE SUBTASK ---
+        if (zone === 'center') {
           updateTodo(activeTask.id, { parentId: overTask.id, order: 0 });
           updateTodo(overTask.id, { collapsed: false });
         } else {
-          // --- DROP IN EDGES -> MAKE SIBLING ---
           const newParentId = overTask.parentId;
-          const isAfter = relativeY >= overHeight * 0.66;
+          const isAfter = zone === 'bottom';
 
-          // Update parent immediately
           if (activeTask.parentId !== newParentId) {
             updateTodo(activeTask.id, { parentId: newParentId });
           }
 
-          // Get fresh siblings list for reordering
           const targetSiblings = todos
             .filter(t => t.parentId === newParentId && t.id !== activeTask.id)
             .sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -108,7 +132,9 @@ export const TodoWindow = () => {
         <DndContext 
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragMove={handleDragMove}
           onDragEnd={handleDragEnd}
+          onDragCancel={() => setActiveDrop(null)}
         >
           <SortableContext 
             items={flattenedTasks.map(t => t.id)}
@@ -116,7 +142,12 @@ export const TodoWindow = () => {
           >
             <div className="flex flex-col">
               {flattenedTasks.map(task => (
-                <TaskItem key={task.id} task={task} depth={task.depth} />
+                <TaskItem 
+                  key={task.id} 
+                  task={task} 
+                  depth={task.depth} 
+                  dropZone={activeDrop?.id === task.id ? activeDrop.zone : null}
+                />
               ))}
             </div>
           </SortableContext>

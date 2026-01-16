@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Todo } from '../types';
 import { useTodoStore } from '../store/todoStore';
+import { DropZone } from './TodoWindow';
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -17,9 +18,10 @@ import {
 interface Props {
   task: Todo;
   depth: number;
+  dropZone: DropZone;
 }
 
-export const TaskItem: React.FC<Props> = ({ task, depth }) => {
+export const TaskItem: React.FC<Props> = ({ task, depth, dropZone }) => {
   const { updateTodo, deleteTodo, todos, addTodo } = useTodoStore();
   const {
     attributes,
@@ -31,17 +33,29 @@ export const TaskItem: React.FC<Props> = ({ task, depth }) => {
   } = useSortable({ id: task.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: isDragging ? CSS.Transform.toString(transform) : undefined,
     transition,
     paddingLeft: `${depth * 24}px`,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
     zIndex: isDragging ? 100 : 'auto',
   };
 
   const hasSubtasks = todos.some(t => t.parentId === task.id);
 
   return (
-    <div ref={setNodeRef} style={style} className="group flex flex-col mb-0.5">
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className="group flex flex-col mb-0.5 relative"
+    >
+      {/* Top/Bottom Drop Indicators */}
+      {dropZone === 'top' && (
+        <div className="absolute top-[-1px] left-0 right-0 h-[2px] bg-blue-500 z-20 shadow-[0_0_4px_rgba(59,130,246,0.6)]" />
+      )}
+      {dropZone === 'bottom' && (
+        <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-blue-500 z-20 shadow-[0_0_4px_rgba(59,130,246,0.6)]" />
+      )}
+
       <div className="flex items-center gap-1 p-1 bg-[#1a1a1a] hover:bg-[#252525] transition-colors border-b border-[#2a2a2a] group-last:border-b-0 min-h-[40px]">
         {/* Expand/Collapse Toggle */}
         <button 
