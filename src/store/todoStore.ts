@@ -26,9 +26,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   setTodos: (todos) => set({ todos, isLoaded: true }),
 
   loadTodosAction: async () => {
-    console.log('Store: loadTodosAction start');
     const todos = await loadTodos();
-    console.log('Store: loadTodosAction finished, todos count:', todos.length);
     set({ todos, isLoaded: true });
   },
   
