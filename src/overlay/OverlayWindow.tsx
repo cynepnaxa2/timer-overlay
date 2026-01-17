@@ -49,7 +49,8 @@ export const OverlayWindow: React.FC = () => {
       <div 
         className="crawling-timer absolute right-[10px] flex items-center justify-center pointer-events-none"
         style={{
-          width: `${diameter}px`,
+          width: level === 1 ? `${diameter}px` : 'max-content',
+          minWidth: `${diameter}px`,
           height: `${diameter}px`,
           animation: `rise ${duration}s ${timing} infinite`
         }}
@@ -57,14 +58,14 @@ export const OverlayWindow: React.FC = () => {
         {/* Level 1: Circle */}
         {level === 1 && (
           <div 
-            className="w-full h-full rounded-full shadow-lg transition-colors border border-white/10"
+            className="w-full h-full rounded-full shadow-lg transition-colors border border-white/10 flex items-center justify-center"
             style={{ 
               backgroundColor: color,
               opacity: opacity,
               boxShadow: `0 0 15px ${color}80`
             }}
           >
-            <div className="w-full h-full flex items-center justify-center text-white font-bold" style={{ fontSize: `${diameter * 0.4}px` }}>
+            <div className="text-white font-bold" style={{ fontSize: `${diameter * 0.4}px` }}>
               {modeInfo.symbol}
             </div>
           </div>
@@ -73,7 +74,7 @@ export const OverlayWindow: React.FC = () => {
         {/* Level 2: Counter Only */}
         {level === 2 && (
           <div 
-            className="text-center font-black transition-colors"
+            className="text-center font-black transition-colors whitespace-nowrap px-2"
             style={{ 
               color: color,
               fontSize: `${diameter * 0.8}px`,
@@ -87,7 +88,7 @@ export const OverlayWindow: React.FC = () => {
 
         {/* Level 3: Expert */}
         {level === 3 && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 shadow-2xl">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 shadow-2xl whitespace-nowrap">
              <div style={{ fontSize: `${diameter * 0.5}px` }}>{modeInfo.emoji}</div>
              <div 
               className="font-black"

@@ -11,19 +11,20 @@ const todoService = require('../services/todoService');
 function getOverlayWidth() {
   if (!state.currentSettings) state.currentSettings = readSettings();
   const settings = state.currentSettings;
-  const symbolSize = Math.max(10, Math.min(200, settings.diameterPx || 60));
+  const diameter = Math.max(10, Math.min(200, settings.diameterPx || 60));
   const level = settings.level || 1;
   
   if (level === 3) {
-    const textWidth = symbolSize * 0.6 + symbolSize * 0.7 * 6 + 20;
-    return Math.max(symbolSize + 50, textWidth);
+    // Width for emoji + large text + padding
+    return diameter * 4; 
   }
   
   if (level === 2) {
-    return symbolSize + symbolSize * 0.7 * 6 + 30;
+    // Width for large text
+    return diameter * 3;
   }
   
-  return symbolSize + 20;
+  return diameter + 40;
 }
 
 function updateWindowSize() {
