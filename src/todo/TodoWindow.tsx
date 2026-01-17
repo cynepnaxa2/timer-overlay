@@ -125,7 +125,7 @@ export const TodoWindow: React.FC = () => {
   }
 
   return (
-    <div className="bg-[#0f0f0f]/95 text-slate-200 min-h-screen font-sans">
+    <div className="bg-[#0f0f0f]/95 text-slate-200 min-h-screen font-sans overflow-y-auto">
       <div className="flex items-center gap-1 p-2 bg-[#1a1a1a] border-b border-[#2a2a2a] sticky top-0 z-20">
         <button 
           onClick={() => addTodo('')}
