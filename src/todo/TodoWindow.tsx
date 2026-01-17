@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { 
   DndContext, 
   closestCenter,
@@ -15,6 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { useTodoStore } from '../store/todoStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { TaskItem } from './TaskItem';
 import { Plus, Check } from 'lucide-react';
 import { Todo } from '../types';
@@ -35,8 +36,11 @@ const getFlattenedTasks = (allTodos: Todo[], parentId: string | null = null, dep
 };
 
 export const TodoWindow: React.FC = () => {
-  const { todos, isLoaded, reorderTodos, addTodo, updateTodo, loadTodosAction } = useTodoStore();
+  const { todos, isLoaded, reorderTodos, addTodo, updateTodo, deleteTodo, loadTodosAction } = useTodoStore();
+  const { settings } = useSettingsStore();
   const [activeDrop, setActiveDrop] = useState<{ id: string; zone: DropZone } | null>(null);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Initial load
   useEffect(() => {
@@ -45,14 +49,110 @@ export const TodoWindow: React.FC = () => {
     }
   }, [isLoaded, loadTodosAction]);
 
+  const flattenedTasks = useMemo(() => getFlattenedTasks(todos), [todos]);
+
+  // Global hotkeys handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // If we are in an input field (typing task content), only allow certain hotkeys
+      const isInput = (e.target as HTMLElement).tagName === 'INPUT';
+      
+      const parts = [];
+      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.shiftKey) parts.push('Shift');
+      if (e.altKey) parts.push('Alt');
+      if (e.metaKey) parts.push('Meta');
+      
+      let keyName = e.key;
+      if (keyName === ' ') keyName = 'Space';
+      if (keyName.length === 1) keyName = keyName.toUpperCase();
+      parts.push(keyName);
+      
+      const pressedHotkey = parts.join('+');
+      const hotkeys = settings.todoHotkeys;
+
+      // Handle hotkeys
+      if (pressedHotkey === hotkeys.addRootTask) {
+        e.preventDefault();
+        const newTodo = addTodo('');
+        setFocusedTaskId(newTodo.id);
+      } else if (pressedHotkey === hotkeys.addSubtask && focusedTaskId) {
+        e.preventDefault();
+        const newTodo = addTodo('', focusedTaskId);
+        updateTodo(focusedTaskId, { collapsed: false });
+        setFocusedTaskId(newTodo.id);
+      } else if (pressedHotkey === hotkeys.addSiblingTask && focusedTaskId) {
+        e.preventDefault();
+        const focusedTask = todos.find(t => t.id === focusedTaskId);
+        if (focusedTask) {
+          const newTodo = addTodo('', focusedTask.parentId, focusedTaskId);
+          setFocusedTaskId(newTodo.id);
+        }
+      } else if (pressedHotkey === hotkeys.execute && focusedTaskId) {
+        e.preventDefault();
+        const focusedTask = todos.find(t => t.id === focusedTaskId);
+        if (focusedTask && window.todoApi) {
+          (window.todoApi as any).startTimer(focusedTask.content);
+        }
+      } else if (pressedHotkey === hotkeys.complete && focusedTaskId) {
+        e.preventDefault();
+        const focusedTask = todos.find(t => t.id === focusedTaskId);
+        if (focusedTask) {
+          updateTodo(focusedTaskId, { completed: !focusedTask.completed });
+        }
+      } else if (pressedHotkey === hotkeys.navNext) {
+        e.preventDefault();
+        const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
+        if (index < flattenedTasks.length - 1) {
+          setFocusedTaskId(flattenedTasks[index + 1].id);
+        } else if (flattenedTasks.length > 0) {
+          setFocusedTaskId(flattenedTasks[0].id);
+        }
+      } else if (pressedHotkey === hotkeys.navPrev) {
+        e.preventDefault();
+        const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
+        if (index > 0) {
+          setFocusedTaskId(flattenedTasks[index - 1].id);
+        } else if (flattenedTasks.length > 0) {
+          setFocusedTaskId(flattenedTasks[flattenedTasks.length - 1].id);
+        }
+      } else if (pressedHotkey === hotkeys.navChild && focusedTaskId) {
+        e.preventDefault();
+        const children = todos.filter(t => t.parentId === focusedTaskId);
+        if (children.length > 0) {
+          updateTodo(focusedTaskId, { collapsed: false });
+          const sortedChildren = [...children].sort((a, b) => (a.order || 0) - (b.order || 0));
+          setFocusedTaskId(sortedChildren[0].id);
+        }
+      } else if (pressedHotkey === hotkeys.navParent && focusedTaskId) {
+        e.preventDefault();
+        const focusedTask = todos.find(t => t.id === focusedTaskId);
+        if (focusedTask && focusedTask.parentId) {
+          setFocusedTaskId(focusedTask.parentId);
+        }
+      } else if (e.key === 'Backspace' && !isInput && focusedTaskId) {
+        e.preventDefault();
+        const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
+        deleteTodo(focusedTaskId);
+        if (flattenedTasks.length > 1) {
+          const nextIndex = index === flattenedTasks.length - 1 ? index - 1 : index;
+          // Note: flattenedTasks might be stale here, but it's okay for choosing next focus
+          const nextTask = flattenedTasks.filter(t => t.id !== focusedTaskId)[nextIndex];
+          if (nextTask) setFocusedTaskId(nextTask.id);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [settings.todoHotkeys, focusedTaskId, todos, flattenedTasks, addTodo, updateTodo, deleteTodo]);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  const flattenedTasks = useMemo(() => getFlattenedTasks(todos), [todos]);
 
   const calculateZone = useCallback((event: DragMoveEvent | DragEndEvent): DropZone => {
     const { active, over } = event;
@@ -158,6 +258,8 @@ export const TodoWindow: React.FC = () => {
                   task={task} 
                   depth={task.depth} 
                   dropZone={activeDrop?.id === task.id ? activeDrop.zone : null}
+                  isFocused={focusedTaskId === task.id}
+                  onFocus={() => setFocusedTaskId(task.id)}
                 />
               ))}
             </div>

@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Todo } from '../types';
@@ -19,10 +19,13 @@ interface Props {
   task: Todo;
   depth: number;
   dropZone: DropZone;
+  isFocused: boolean;
+  onFocus: () => void;
 }
 
-export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone }) => {
+export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocused, onFocus }) => {
   const { updateTodo, deleteTodo, todos, addTodo } = useTodoStore();
+  const inputRef = useRef<HTMLInputElement>(null);
   const {
     attributes,
     listeners,
@@ -31,6 +34,12 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone }) => {
     transition,
     isDragging
   } = useSortable({ id: task.id });
+
+  useEffect(() => {
+    if (isFocused && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isFocused]);
 
   const style = {
     transform: isDragging ? CSS.Transform.toString(transform) : undefined,
@@ -46,7 +55,7 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone }) => {
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="group flex flex-col mb-0.5 relative select-none"
+      className={`group flex flex-col mb-0.5 relative select-none transition-all ${isFocused ? 'bg-blue-900/10' : ''}`}
     >
       {/* Top/Bottom Drop Indicators */}
       {dropZone === 'top' && (
@@ -56,7 +65,12 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone }) => {
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-blue-500 z-20 shadow-[0_0_4px_rgba(59,130,246,0.6)]" />
       )}
 
-      <div className="flex items-center gap-1 p-1 bg-[#1a1a1a] hover:bg-[#252525] transition-colors border-b border-[#2a2a2a] group-last:border-b-0 min-h-[40px]">
+      <div className={`flex items-center gap-1 p-1 hover:bg-[#252525] transition-colors border-b border-[#2a2a2a] group-last:border-b-0 min-h-[40px] ${isFocused ? 'bg-[#252525]' : 'bg-[#1a1a1a]'}`}>
+        {/* Focus indicator bar */}
+        {isFocused && (
+          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500" />
+        )}
+
         {/* Expand/Collapse Toggle */}
         <button 
           onClick={() => updateTodo(task.id, { collapsed: !task.collapsed })}
@@ -77,7 +91,9 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone }) => {
         {/* Task Content */}
         <div className="flex items-center gap-2 flex-grow min-w-0">
           <input
+            ref={inputRef}
             value={task.content}
+            onFocus={onFocus}
             onChange={(e) => updateTodo(task.id, { content: e.target.value })}
             className={`bg-transparent border-none focus:outline-none flex-grow text-[14px] text-slate-200 py-1 px-1 ${task.completed ? 'line-through opacity-40' : ''}`}
             aria-label="Task content"
@@ -85,7 +101,7 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone }) => {
         </div>
 
         {/* Actions Button Group */}
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+        <div className={`flex items-center gap-0.5 transition-opacity pr-1 ${isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
           <button 
             onClick={() => {
               addTodo('', task.id);

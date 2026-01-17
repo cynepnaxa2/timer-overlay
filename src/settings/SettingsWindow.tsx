@@ -18,8 +18,49 @@ const INPUT_STYLE = "bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 f
 const SELECT_STYLE = "bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-white w-full cursor-pointer";
 const TOGGLE_STYLE = "relative inline-flex items-center cursor-pointer";
 
+const HOTKEY_LABELS: Record<string, string> = {
+  addSubtask: 'Добавить подзадачу',
+  addRootTask: 'Добавить основную задачу',
+  addSiblingTask: 'Добавить задачу того же уровня',
+  execute: 'Запустить таймер',
+  complete: 'Завершить / Отменить завершение',
+  navNext: 'Навигация вниз',
+  navPrev: 'Навигация вверх',
+  navChild: 'Войти в подзадачи',
+  navParent: 'Выйти к родительской задаче'
+};
+
 export const SettingsWindow = () => {
   const { settings, updateSettings } = useSettingsStore();
+  const [recordingKey, setRecordingKey] = React.useState<string | null>(null);
+
+  const handleKeyDown = (e: React.KeyboardEvent, key: string) => {
+    if (recordingKey !== key) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+
+    const parts = [];
+    if (e.ctrlKey) parts.push('Ctrl');
+    if (e.shiftKey) parts.push('Shift');
+    if (e.altKey) parts.push('Alt');
+    if (e.metaKey) parts.push('Meta');
+
+    // Skip if only modifiers are pressed
+    if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
+
+    let keyName = e.key;
+    if (keyName === ' ') keyName = 'Space';
+    if (keyName.length === 1) keyName = keyName.toUpperCase();
+    
+    parts.push(keyName);
+    const hotkey = parts.join('+');
+
+    updateSettings({ 
+      todoHotkeys: { ...settings.todoHotkeys, [key]: hotkey } 
+    });
+    setRecordingKey(null);
+  };
 
   const handleResetStats = async () => {
     if (window.confirm('Вы уверены, что хотите сбросить всю статистику?')) {
@@ -208,15 +249,27 @@ export const SettingsWindow = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-900/50 p-4 rounded-xl">
                   {Object.entries(settings.todoHotkeys).map(([key, value]) => (
                     <div key={key} className="flex flex-col gap-1">
-                      <span className="text-xs text-slate-500">{key}</span>
-                      <input 
-                        type="text"
-                        value={value}
-                        onChange={(e) => updateSettings({ 
-                          todoHotkeys: { ...settings.todoHotkeys, [key]: e.target.value } 
-                        })}
-                        className="bg-slate-800 border border-slate-700 rounded px-3 py-1 text-sm text-slate-200"
-                      />
+                      <span className="text-xs text-slate-500">{HOTKEY_LABELS[key] || key}</span>
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          readOnly
+                          value={recordingKey === key ? 'Нажмите клавиши...' : value}
+                          onFocus={() => setRecordingKey(key)}
+                          onBlur={() => setRecordingKey(null)}
+                          onKeyDown={(e) => handleKeyDown(e, key)}
+                          className={`w-full bg-slate-800 border ${recordingKey === key ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-700'} rounded px-3 py-2 text-sm text-slate-200 cursor-pointer focus:outline-none transition-all`}
+                          placeholder="Нажмите для записи..."
+                        />
+                        {recordingKey === key && (
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                            <span className="flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

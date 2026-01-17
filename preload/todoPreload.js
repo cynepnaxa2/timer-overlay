@@ -9,4 +9,5 @@ contextBridge.exposeInMainWorld('todoApi', {
   onSettingsUpdated: (callback) => {
     ipcRenderer.on('settings-updated', (_event, settings) => callback(settings));
   },
+  startTimer: (motivationWord) => ipcRenderer.invoke('start-timer', motivationWord),
 });
