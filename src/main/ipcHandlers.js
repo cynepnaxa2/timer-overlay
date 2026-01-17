@@ -13,11 +13,48 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     return true;
   });
 
-  ipcMain.handle('save-settings', (_event, settings) => {
+  ipcMain.handle('save-settings', async (_event, settings) => {
     state.currentSettings = writeSettings(settings);
+    
+    // Notify all windows and apply styles immediately
+    await windowManager.applyOverlayStyles();
+    
+    if (state.mainWindow && !state.mainWindow.isDestroyed()) {
+      state.mainWindow.webContents.send('settings-updated', state.currentSettings);
+    }
+
     if (state.settingsWindow && !state.settingsWindow.isDestroyed()) {
       state.settingsWindow.webContents.send('settings-updated', state.currentSettings);
     }
+    
+    if (state.todoWindow && !state.todoWindow.isDestroyed()) {
+      state.todoWindow.webContents.send('settings-updated', state.currentSettings);
+    }
+
+    // Handle specific setting side-effects
+    if (settings.autostart !== undefined) {
+      try {
+        app.setLoginItemSettings({
+          openAtLogin: settings.autostart,
+          openAsHidden: false
+        });
+      } catch (err) {
+        console.error('Failed to update autostart:', err);
+      }
+    }
+    
+    if (settings.showTray !== undefined) {
+      trayManager.updateTrayVisibility(windowManager.createTodoWindow, windowManager.createSettingsWindow);
+    }
+    
+    if (settings.durationSeconds !== undefined) {
+      timerManager.startCounterTimer();
+    }
+    
+    if (settings.resetHotkey !== undefined) {
+      timerManager.registerResetHotkey();
+    }
+
     return true;
   });
 

@@ -12,6 +12,13 @@ loadSettings().then(settings => {
   }
 })
 
+// Listen for updates from main process
+if (window.settingsApi) {
+  window.settingsApi.onSettingsUpdated((settings) => {
+    useSettingsStore.getState().setSettings(settings)
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <SettingsWindow />

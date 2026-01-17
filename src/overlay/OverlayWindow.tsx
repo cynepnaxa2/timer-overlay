@@ -2,22 +2,35 @@ import React, { useMemo } from 'react';
 import { useSettingsStore } from '../store/settingsStore';
 import { formatCounterValue } from '../utils/timer';
 
+const MODE_DETAILS: Record<string, { emoji: string, symbol: string }> = {
+  money: { emoji: '💵', symbol: '$' },
+  popularity: { emoji: '👍', symbol: '👍' },
+  selfDevelopment: { emoji: '⬆️', symbol: '⬆️' },
+  success: { emoji: '🚀', symbol: '🚀' },
+  health: { emoji: '❤️', symbol: '❤️' },
+  sport: { emoji: '💪', symbol: '💪' },
+  creativity: { emoji: '🎨', symbol: '🎨' },
+  learning: { emoji: '📚', symbol: '📚' },
+};
+
 export const OverlayWindow: React.FC = () => {
   const { settings } = useSettingsStore();
 
-  const { diameter, opacity, color, duration, timing, level, counterValue } = useMemo(() => {
+  const { diameter, opacity, color, duration, timing, level, counterValue, modeInfo } = useMemo(() => {
     const d = settings.diameterPx || 60;
     const modeId = settings.mode || 'money';
     const currentCounter = settings.displayCounters[modeId] || { value: 0, totalMinutes: 0 };
+    const info = MODE_DETAILS[modeId] || MODE_DETAILS.money;
     
     return {
       diameter: d,
       opacity: settings.opacity || 0.55,
       color: settings.colorHex || '#ff0000',
       duration: settings.durationSeconds || 60,
-      timing: settings.stepped ? 'steps(60, end)' : 'linear',
+      timing: settings.stepped ? `steps(${settings.durationSeconds}, end)` : 'linear',
       level: settings.level || 1,
-      counterValue: formatCounterValue(modeId, currentCounter.value)
+      counterValue: formatCounterValue(modeId, currentCounter.value),
+      modeInfo: info
     };
   }, [settings]);
 
@@ -44,13 +57,17 @@ export const OverlayWindow: React.FC = () => {
         {/* Level 1: Circle */}
         {level === 1 && (
           <div 
-            className="w-full h-full rounded-full shadow-lg transition-colors border border-white/5"
+            className="w-full h-full rounded-full shadow-lg transition-colors border border-white/10"
             style={{ 
               backgroundColor: color,
               opacity: opacity,
               boxShadow: `0 0 15px ${color}80`
             }}
-          />
+          >
+            <div className="w-full h-full flex items-center justify-center text-white font-bold" style={{ fontSize: `${diameter * 0.4}px` }}>
+              {modeInfo.symbol}
+            </div>
+          </div>
         )}
 
         {/* Level 2: Counter Only */}
@@ -59,7 +76,7 @@ export const OverlayWindow: React.FC = () => {
             className="text-center font-black transition-colors"
             style={{ 
               color: color,
-              fontSize: `${diameter * 1.1}px`,
+              fontSize: `${diameter * 0.8}px`,
               textShadow: '0 0 10px rgba(0,0,0,0.9), 0 0 5px rgba(255,255,255,0.3)',
               opacity: 0.95
             }}
@@ -70,13 +87,13 @@ export const OverlayWindow: React.FC = () => {
 
         {/* Level 3: Expert */}
         {level === 3 && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/20 backdrop-blur-sm border border-white/5">
-             <div style={{ fontSize: `${diameter * 0.55}px` }}>💰</div>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 shadow-2xl">
+             <div style={{ fontSize: `${diameter * 0.5}px` }}>{modeInfo.emoji}</div>
              <div 
               className="font-black"
               style={{ 
                 color: color,
-                fontSize: `${diameter * 0.65}px`,
+                fontSize: `${diameter * 0.6}px`,
                 textShadow: '0 0 8px rgba(0,0,0,0.8)'
               }}
             >

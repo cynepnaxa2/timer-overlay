@@ -65,7 +65,9 @@ function createOverlayWindow() {
       nodeIntegration: false,
       sandbox: true,
       devTools: false,
-      preload: path.resolve(__dirname, '../../dist-electron/overlayPreload.js')
+      preload: process.env.VITE_DEV_SERVER_URL 
+        ? path.join(process.cwd(), 'dist-electron', 'overlayPreload.js')
+        : path.join(__dirname, 'overlayPreload.js')
     }
   });
 
