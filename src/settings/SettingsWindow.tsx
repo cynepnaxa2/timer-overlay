@@ -51,6 +51,10 @@ export const SettingsWindow = () => {
 
     let keyName = e.key;
     if (keyName === ' ') keyName = 'Space';
+    if (keyName === 'ArrowUp') keyName = 'Up';
+    if (keyName === 'ArrowDown') keyName = 'Down';
+    if (keyName === 'ArrowLeft') keyName = 'Left';
+    if (keyName === 'ArrowRight') keyName = 'Right';
     if (keyName.length === 1) keyName = keyName.toUpperCase();
     
     parts.push(keyName);
