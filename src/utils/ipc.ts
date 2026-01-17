@@ -27,5 +27,9 @@ export const loadSettings = async (): Promise<Settings | null> => {
   if (window.todoApi && (window.todoApi as any).loadSettings) {
     return (window.todoApi as any).loadSettings();
   }
+  // Try overlayApi too just in case
+  if (window.overlayApi && (window.overlayApi as any).loadSettings) {
+    return (window.overlayApi as any).loadSettings();
+  }
   return null;
 };

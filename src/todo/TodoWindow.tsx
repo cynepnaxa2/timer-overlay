@@ -71,15 +71,6 @@ export const TodoWindow: React.FC = () => {
       const pressedHotkey = parts.join('+');
       const hotkeys = settings.todoHotkeys;
 
-      if (pressedHotkey !== 'Enter' && pressedHotkey !== 'Backspace' && !['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) {
-        console.log('--- Hotkey Debug ---');
-        console.log('Pressed:', pressedHotkey);
-        console.log('Current Map:', JSON.stringify(hotkeys, null, 2));
-        console.log('Match addRootTask:', pressedHotkey === hotkeys.addRootTask);
-        console.log('Match addSiblingTask:', pressedHotkey === hotkeys.addSiblingTask);
-        console.log('Match addSubtask:', pressedHotkey === hotkeys.addSubtask);
-      }
-
       // Handle hotkeys
       if (pressedHotkey === hotkeys.addRootTask) {
         e.preventDefault();

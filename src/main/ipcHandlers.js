@@ -251,18 +251,6 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     }
   });
   
-  ipcMain.handle('get-todo-hotkeys', () => {
-    if (!state.currentSettings) state.currentSettings = readSettings();
-    return state.currentSettings.todoHotkeys;
-  });
-  
-  ipcMain.handle('set-todo-hotkeys', (_event, hotkeys) => {
-    if (!state.currentSettings) state.currentSettings = readSettings();
-    state.currentSettings.todoHotkeys = hotkeys;
-    state.currentSettings = writeSettings(state.currentSettings);
-    return state.currentSettings.todoHotkeys;
-  });
-  
   ipcMain.handle('select-sync-folder', async () => {
     if (!state.settingsWindow || state.settingsWindow.isDestroyed()) {
       return null;
@@ -288,68 +276,6 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     notifyTodosUpdated();
     
     return newPath;
-  });
-  
-  ipcMain.on('update-settings', async (_event, patch) => {
-    if (!state.currentSettings) state.currentSettings = readSettings();
-    
-    const newSettings = { ...state.currentSettings, ...patch };
-    if (patch.todoHotkeys) {
-      newSettings.todoHotkeys = { ...state.currentSettings.todoHotkeys, ...patch.todoHotkeys };
-    }
-    if (patch.levelSettings) {
-      newSettings.levelSettings = { ...state.currentSettings.levelSettings, ...patch.levelSettings };
-    }
-
-    state.currentSettings = writeSettings(newSettings);
-    
-    await windowManager.applyOverlayStyles();
-    notifySettingsUpdated(state.currentSettings);
-    
-    if ('autostart' in patch) {
-      try {
-        app.setLoginItemSettings({
-          openAtLogin: patch.autostart,
-          openAsHidden: false
-        });
-      } catch {}
-    }
-    
-    if ('showTray' in patch) {
-      trayManager.updateTrayVisibility(windowManager.createTodoWindow, windowManager.createSettingsWindow);
-    }
-    
-    if ('durationSeconds' in patch) {
-      timerManager.startCounterTimer();
-    }
-    
-    if ('resetHotkey' in patch) {
-      timerManager.registerResetHotkey();
-    }
-    
-    if ('level' in patch || 'mode' in patch) {
-      if ('level' in patch) windowManager.updateWindowSize();
-      
-      const level = state.currentSettings.level || 1;
-      const mode = getMode(state.currentSettings.mode || 'money');
-      const modeData = serializeMode(mode);
-      const modeId = state.currentSettings.mode || 'money';
-      const formatted = getFormattedCounter(state.currentSettings.displayCounters || {}, modeId);
-      
-      if (state.mainWindow && !state.mainWindow.isDestroyed()) {
-        state.mainWindow.webContents.send('level-updated', level);
-        state.mainWindow.webContents.send('mode-updated', modeData);
-        state.mainWindow.webContents.send('counter-updated', {
-          mode: modeData,
-          value: formatted,
-          counter: state.currentSettings.displayCounters?.[modeId] || { value: 0, totalMinutes: 0 }
-        });
-      }
-    }
-    
-    if (state.settingsWindow && !state.settingsWindow.isDestroyed()) {
-      state.settingsWindow.webContents.send('counters-updated', state.currentSettings.counters);
-    }
   });
 }
 
