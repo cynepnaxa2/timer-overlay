@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Settings } from '../types';
-import { saveSettings } from '../utils/ipc';
+import { saveSettings, loadSettings } from '../utils/ipc';
 
 export const DEFAULT_SETTINGS: Settings = {
   diameterPx: 60,
@@ -21,9 +21,9 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   resetHotkey: 'Ctrl+Shift+R',
   todoHotkeys: {
-    addSubtask: 'Ctrl+Enter',
-    addRootTask: 'Shift+Enter',
-    addSiblingTask: 'Enter',
+    addSiblingTask: 'Enter',      // Создать задачу того же уровня
+    addSubtask: 'Ctrl+Enter',     // Создать подзадачу
+    addRootTask: 'Shift+Enter',   // Создать основную задачу
     execute: 'Ctrl+Space',
     complete: 'Delete',
     navNext: 'Alt+Down',
@@ -36,30 +36,44 @@ export const DEFAULT_SETTINGS: Settings = {
 
 interface SettingsState {
   settings: Settings;
+  isInitialized: boolean;
   setSettings: (settings: Settings) => void;
   updateSettings: (updates: Partial<Settings>) => void;
+  loadSettingsAction: () => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
+  isInitialized: false,
   
-  setSettings: (settings) => set({ settings }),
+  setSettings: (settings) => set({ settings, isInitialized: true }),
+
+  loadSettingsAction: async () => {
+    const settings = await loadSettings();
+    if (settings) {
+      set({ settings, isInitialized: true });
+    }
+  },
   
   updateSettings: (updates) => {
     const { settings } = get();
     const newSettings = { ...settings, ...updates };
     
-    // Deep merge for hotkeys if they are in updates
+    // Deep merge for hotkeys
     if (updates.todoHotkeys) {
       newSettings.todoHotkeys = { ...settings.todoHotkeys, ...updates.todoHotkeys };
     }
     
-    // Deep merge for levelSettings if they are in updates
+    // Deep merge for levelSettings
     if (updates.levelSettings) {
       newSettings.levelSettings = { ...settings.levelSettings, ...updates.levelSettings };
     }
 
     set({ settings: newSettings });
+    
+    // CRITICAL: We only save to disk if this is the settings window 
+    // or if we explicitly want to persist. 
+    // In React version, we should rely on IPC to tell main process to save.
     saveSettings(newSettings);
   },
 }));

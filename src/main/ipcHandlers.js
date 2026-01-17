@@ -13,34 +13,62 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     return true;
   });
 
-  ipcMain.handle('save-settings', async (_event, settings) => {
-    state.currentSettings = writeSettings(settings);
-    
-    // Notify all windows and apply styles immediately
-    await windowManager.applyOverlayStyles();
-    
+  const notifySettingsUpdated = (settings) => {
     if (state.mainWindow && !state.mainWindow.isDestroyed()) {
-      state.mainWindow.webContents.send('settings-updated', state.currentSettings);
+      state.mainWindow.webContents.send('settings-updated', settings);
     }
-
     if (state.settingsWindow && !state.settingsWindow.isDestroyed()) {
-      state.settingsWindow.webContents.send('settings-updated', state.currentSettings);
+      state.settingsWindow.webContents.send('settings-updated', settings);
+    }
+    if (state.todoWindow && !state.todoWindow.isDestroyed()) {
+      state.todoWindow.webContents.send('settings-updated', settings);
+    }
+  };
+
+  ipcMain.handle('save-settings', async (_event, settings) => {
+    // 1. Get current state (on disk/memory)
+    const oldSettings = state.currentSettings || readSettings();
+    
+    // 2. Merge root level fields
+    const newSettings = { 
+      ...oldSettings, 
+      ...settings 
+    };
+    
+    // 3. Deep merge for nested objects ONLY if they exist in the incoming settings
+    // This prevents partial updates from wiping out other keys in these objects
+    if (settings.todoHotkeys) {
+      newSettings.todoHotkeys = { 
+        ...oldSettings.todoHotkeys, 
+        ...settings.todoHotkeys 
+      };
     }
     
-    if (state.todoWindow && !state.todoWindow.isDestroyed()) {
-      state.todoWindow.webContents.send('settings-updated', state.currentSettings);
+    if (settings.levelSettings) {
+      // Handle the fact that keys might be strings "1", "2" or numbers 1, 2
+      newSettings.levelSettings = { 
+        ...oldSettings.levelSettings, 
+        ...settings.levelSettings 
+      };
     }
 
-    // Handle specific setting side-effects
+    console.log('Saving settings to disk:', JSON.stringify(newSettings.todoHotkeys));
+
+    // 4. Update memory and disk
+    state.currentSettings = writeSettings(newSettings);
+    
+    // 5. Notify all windows and apply styles
+    await windowManager.applyOverlayStyles();
+    notifySettingsUpdated(state.currentSettings);
+
+    // 6. Handle side effects
     if (settings.autostart !== undefined) {
       try {
         app.setLoginItemSettings({
           openAtLogin: settings.autostart,
           openAsHidden: false
         });
-      } catch (err) {
-        console.error('Failed to update autostart:', err);
-      }
+      } catch {}
     }
     
     if (settings.showTray !== undefined) {
@@ -59,7 +87,9 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
   });
 
   ipcMain.handle('get-settings', () => {
-    if (!state.currentSettings) state.currentSettings = readSettings();
+    if (!state.currentSettings) {
+      state.currentSettings = readSettings();
+    }
     return state.currentSettings;
   });
   
@@ -262,10 +292,19 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
   
   ipcMain.on('update-settings', async (_event, patch) => {
     if (!state.currentSettings) state.currentSettings = readSettings();
-    const durationChanged = 'durationSeconds' in patch;
-    state.currentSettings = writeSettings({ ...state.currentSettings, ...patch });
+    
+    const newSettings = { ...state.currentSettings, ...patch };
+    if (patch.todoHotkeys) {
+      newSettings.todoHotkeys = { ...state.currentSettings.todoHotkeys, ...patch.todoHotkeys };
+    }
+    if (patch.levelSettings) {
+      newSettings.levelSettings = { ...state.currentSettings.levelSettings, ...patch.levelSettings };
+    }
+
+    state.currentSettings = writeSettings(newSettings);
     
     await windowManager.applyOverlayStyles();
+    notifySettingsUpdated(state.currentSettings);
     
     if ('autostart' in patch) {
       try {
@@ -273,16 +312,14 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
           openAtLogin: patch.autostart,
           openAsHidden: false
         });
-      } catch (err) {
-        console.error('Failed to update autostart:', err);
-      }
+      } catch {}
     }
     
     if ('showTray' in patch) {
       trayManager.updateTrayVisibility(windowManager.createTodoWindow, windowManager.createSettingsWindow);
     }
     
-    if (durationChanged) {
+    if ('durationSeconds' in patch) {
       timerManager.startCounterTimer();
     }
     
@@ -311,11 +348,7 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     }
     
     if (state.settingsWindow && !state.settingsWindow.isDestroyed()) {
-      state.settingsWindow.webContents.send('settings-updated');
       state.settingsWindow.webContents.send('counters-updated', state.currentSettings.counters);
-    }
-    if (state.todoWindow && !state.todoWindow.isDestroyed()) {
-      state.todoWindow.webContents.send('settings-updated', state.currentSettings);
     }
   });
 }

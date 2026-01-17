@@ -71,21 +71,38 @@ export const TodoWindow: React.FC = () => {
       const pressedHotkey = parts.join('+');
       const hotkeys = settings.todoHotkeys;
 
+      if (pressedHotkey !== 'Enter' && pressedHotkey !== 'Backspace' && !['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) {
+        console.log('--- Hotkey Debug ---');
+        console.log('Pressed:', pressedHotkey);
+        console.log('Current Map:', JSON.stringify(hotkeys, null, 2));
+        console.log('Match addRootTask:', pressedHotkey === hotkeys.addRootTask);
+        console.log('Match addSiblingTask:', pressedHotkey === hotkeys.addSiblingTask);
+        console.log('Match addSubtask:', pressedHotkey === hotkeys.addSubtask);
+      }
+
       // Handle hotkeys
       if (pressedHotkey === hotkeys.addRootTask) {
         e.preventDefault();
         const newTodo = addTodo('');
         setFocusedTaskId(newTodo.id);
-      } else if (pressedHotkey === hotkeys.addSubtask && focusedTaskId) {
+      } else if (pressedHotkey === hotkeys.addSubtask) {
+        if (focusedTaskId) {
+          e.preventDefault();
+          const newTodo = addTodo('', focusedTaskId);
+          updateTodo(focusedTaskId, { collapsed: false });
+          setFocusedTaskId(newTodo.id);
+        }
+      } else if (pressedHotkey === hotkeys.addSiblingTask) {
         e.preventDefault();
-        const newTodo = addTodo('', focusedTaskId);
-        updateTodo(focusedTaskId, { collapsed: false });
-        setFocusedTaskId(newTodo.id);
-      } else if (pressedHotkey === hotkeys.addSiblingTask && focusedTaskId) {
-        e.preventDefault();
-        const focusedTask = todos.find(t => t.id === focusedTaskId);
-        if (focusedTask) {
-          const newTodo = addTodo('', focusedTask.parentId, focusedTaskId);
+        if (focusedTaskId) {
+          const focusedTask = todos.find(t => t.id === focusedTaskId);
+          if (focusedTask) {
+            const newTodo = addTodo('', focusedTask.parentId, focusedTaskId);
+            setFocusedTaskId(newTodo.id);
+          }
+        } else {
+          // If no task focused, add sibling as root task
+          const newTodo = addTodo('');
           setFocusedTaskId(newTodo.id);
         }
       } else if (pressedHotkey === hotkeys.execute && focusedTaskId) {

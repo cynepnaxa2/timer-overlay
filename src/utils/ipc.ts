@@ -24,5 +24,8 @@ export const loadSettings = async (): Promise<Settings | null> => {
   if (window.settingsApi) {
     return window.settingsApi.loadSettings();
   }
+  if (window.todoApi && (window.todoApi as any).loadSettings) {
+    return (window.todoApi as any).loadSettings();
+  }
   return null;
 };

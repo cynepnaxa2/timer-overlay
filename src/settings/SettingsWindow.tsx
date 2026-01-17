@@ -19,15 +19,15 @@ const SELECT_STYLE = "bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 
 const TOGGLE_STYLE = "relative inline-flex items-center cursor-pointer";
 
 const HOTKEY_LABELS: Record<string, string> = {
-  addSubtask: 'Добавить подзадачу',
-  addRootTask: 'Добавить основную задачу',
-  addSiblingTask: 'Добавить задачу того же уровня',
-  execute: 'Запустить таймер',
-  complete: 'Завершить / Отменить завершение',
-  navNext: 'Навигация вниз',
-  navPrev: 'Навигация вверх',
+  addSubtask: 'Создать подзадачу (для выбранной)',
+  addRootTask: 'Создать основную задачу (в конце списка)',
+  addSiblingTask: 'Создать задачу того же уровня',
+  execute: 'Запустить таймер для задачи',
+  complete: 'Отметить как выполненную',
+  navNext: 'Перейти к следующей задаче',
+  navPrev: 'Перейти к предыдущей задаче',
   navChild: 'Войти в подзадачи',
-  navParent: 'Выйти к родительской задаче'
+  navParent: 'Вернуться к родителю'
 };
 
 export const SettingsWindow = () => {
@@ -56,8 +56,17 @@ export const SettingsWindow = () => {
     parts.push(keyName);
     const hotkey = parts.join('+');
 
+    // 1. Check for duplicates and clear them
+    const newHotkeys = { ...settings.todoHotkeys };
+    Object.keys(newHotkeys).forEach(k => {
+      if (newHotkeys[k] === hotkey) {
+        newHotkeys[k] = ''; // Clear duplicate
+      }
+    });
+    newHotkeys[key] = hotkey;
+
     updateSettings({ 
-      todoHotkeys: { ...settings.todoHotkeys, [key]: hotkey } 
+      todoHotkeys: newHotkeys 
     });
     setRecordingKey(null);
   };
@@ -247,31 +256,34 @@ export const SettingsWindow = () => {
               <div className="col-span-2">
                 <label className={LABEL_STYLE}>Задачи (Todo)</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-900/50 p-4 rounded-xl">
-                  {Object.entries(settings.todoHotkeys).map(([key, value]) => (
-                    <div key={key} className="flex flex-col gap-1">
-                      <span className="text-xs text-slate-500">{HOTKEY_LABELS[key] || key}</span>
-                      <div className="relative">
-                        <input 
-                          type="text"
-                          readOnly
-                          value={recordingKey === key ? 'Нажмите клавиши...' : value}
-                          onFocus={() => setRecordingKey(key)}
-                          onBlur={() => setRecordingKey(null)}
-                          onKeyDown={(e) => handleKeyDown(e, key)}
-                          className={`w-full bg-slate-800 border ${recordingKey === key ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-700'} rounded px-3 py-2 text-sm text-slate-200 cursor-pointer focus:outline-none transition-all`}
-                          placeholder="Нажмите для записи..."
-                        />
-                        {recordingKey === key && (
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                            <span className="flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                            </span>
-                          </div>
-                        )}
+                  {Object.keys(HOTKEY_LABELS).map((key) => {
+                    const value = settings.todoHotkeys[key] || '';
+                    return (
+                      <div key={key} className="flex flex-col gap-1">
+                        <span className="text-xs text-slate-500">{HOTKEY_LABELS[key]}</span>
+                        <div className="relative">
+                          <input 
+                            type="text"
+                            readOnly
+                            value={recordingKey === key ? 'Нажмите клавиши...' : value}
+                            onFocus={() => setRecordingKey(key)}
+                            onBlur={() => setRecordingKey(null)}
+                            onKeyDown={(e) => handleKeyDown(e, key)}
+                            className={`w-full bg-slate-800 border ${recordingKey === key ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-700'} rounded px-3 py-2 text-sm text-slate-200 cursor-pointer focus:outline-none transition-all`}
+                            placeholder="Нажмите для записи..."
+                          />
+                          {recordingKey === key && (
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                              <span className="flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

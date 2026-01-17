@@ -1,26 +1,27 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { SettingsWindow } from './settings/SettingsWindow'
 import './index.css'
 import { useSettingsStore } from './store/settingsStore'
-import { loadSettings } from './utils/ipc'
 
-// Load initial data
-loadSettings().then(settings => {
-  if (settings) {
-    useSettingsStore.getState().setSettings(settings)
-  }
-})
+const Root = () => {
+  const loadSettingsAction = useSettingsStore(state => state.loadSettingsAction)
 
-// Listen for updates from main process
-if (window.settingsApi) {
-  window.settingsApi.onSettingsUpdated((settings) => {
-    useSettingsStore.getState().setSettings(settings)
-  })
+  useEffect(() => {
+    loadSettingsAction()
+    
+    if (window.settingsApi) {
+      window.settingsApi.onSettingsUpdated((settings) => {
+        useSettingsStore.getState().setSettings(settings)
+      })
+    }
+  }, [loadSettingsAction])
+
+  return (
+    <React.StrictMode>
+      <SettingsWindow />
+    </React.StrictMode>
+  )
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <SettingsWindow />
-  </React.StrictMode>,
-)
+ReactDOM.createRoot(document.getElementById('root')!).render(<Root />)

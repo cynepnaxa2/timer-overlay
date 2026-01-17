@@ -22,9 +22,9 @@ const DEFAULT_SETTINGS = {
   },
   resetHotkey: 'Ctrl+Shift+R', // Горячая клавиша для сброса счетчиков
   todoHotkeys: {
+    addSiblingTask: 'Enter',
     addSubtask: 'Ctrl+Enter',
     addRootTask: 'Shift+Enter',
-    addSiblingTask: 'Enter',
     execute: 'Ctrl+Space',
     complete: 'Delete',
     navNext: 'Alt+Down',
@@ -50,9 +50,14 @@ function readSettings() {
     const parsed = JSON.parse(raw);
     const settings = { ...DEFAULT_SETTINGS, ...parsed };
     
-    // Глубокое слияние для горячих клавиш, чтобы новые клавиши добавлялись к старым настройкам
     if (parsed.todoHotkeys) {
-      settings.todoHotkeys = { ...DEFAULT_SETTINGS.todoHotkeys, ...parsed.todoHotkeys };
+      settings.todoHotkeys = { ...parsed.todoHotkeys };
+      // Fill in only completely missing actions from defaults
+      Object.keys(DEFAULT_SETTINGS.todoHotkeys).forEach(key => {
+        if (!(key in settings.todoHotkeys)) {
+          settings.todoHotkeys[key] = DEFAULT_SETTINGS.todoHotkeys[key];
+        }
+      });
     }
     
     return settings;
@@ -64,12 +69,17 @@ function readSettings() {
 function writeSettings(settings) {
   const file = getSettingsPath();
   try {
-    const merged = { ...DEFAULT_SETTINGS, ...settings };
+    // Ensure we don't save an empty or corrupt object
+    if (!settings || typeof settings !== 'object') return DEFAULT_SETTINGS;
+    
+    // We don't merge with DEFAULT_SETTINGS here anymore, 
+    // because the caller (ipcHandlers) should provide the full state
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify(merged, null, 2), 'utf8');
-    return merged;
-  } catch {
-    return { ...DEFAULT_SETTINGS };
+    fs.writeFileSync(file, JSON.stringify(settings, null, 2), 'utf8');
+    return settings;
+  } catch (err) {
+    console.error('Failed to write settings:', err);
+    return settings || DEFAULT_SETTINGS;
   }
 }
 

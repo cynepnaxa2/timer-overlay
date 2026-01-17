@@ -65,10 +65,10 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocuse
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-blue-500 z-20 shadow-[0_0_4px_rgba(59,130,246,0.6)]" />
       )}
 
-      <div className={`flex items-center gap-1 p-1 hover:bg-[#252525] transition-colors border-b border-[#2a2a2a] group-last:border-b-0 min-h-[40px] ${isFocused ? 'bg-[#252525]' : 'bg-[#1a1a1a]'}`}>
+      <div className={`flex items-center gap-1 p-1 hover:bg-[#252525] transition-colors border-b border-[#2a2a2a] group-last:border-b-0 min-h-[40px] ${isFocused ? 'bg-[#2a3a4a] ring-1 ring-inset ring-blue-500/50' : 'bg-[#1a1a1a]'}`}>
         {/* Focus indicator bar */}
         {isFocused && (
-          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500" />
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
         )}
 
         {/* Expand/Collapse Toggle */}
