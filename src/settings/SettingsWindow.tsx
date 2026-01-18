@@ -24,6 +24,7 @@ const HOTKEY_LABELS: Record<string, string> = {
   addSiblingTask: 'Создать задачу того же уровня',
   execute: 'Запустить таймер для задачи',
   complete: 'Отметить как выполненную',
+  deleteTask: 'Удалить задачу (двойное нажатие)',
   navNext: 'Перейти к следующей задаче',
   navPrev: 'Перейти к предыдущей задаче',
   navChild: 'Войти в подзадачи',
@@ -34,8 +35,8 @@ export const SettingsWindow = () => {
   const { settings, updateSettings } = useSettingsStore();
   const [recordingKey, setRecordingKey] = React.useState<string | null>(null);
 
-  const handleKeyDown = (e: React.KeyboardEvent, key: string) => {
-    if (recordingKey !== key) return;
+  const handleKeyDown = (e: React.KeyboardEvent, target: string, isTodoHotkey: boolean) => {
+    if (recordingKey !== target) return;
     
     e.preventDefault();
     e.stopPropagation();
@@ -60,18 +61,36 @@ export const SettingsWindow = () => {
     parts.push(keyName);
     const hotkey = parts.join('+');
 
-    // 1. Check for duplicates and clear them
-    const newHotkeys = { ...settings.todoHotkeys };
-    Object.keys(newHotkeys).forEach(k => {
-      if (newHotkeys[k] === hotkey) {
-        newHotkeys[k] = ''; // Clear duplicate
-      }
-    });
-    newHotkeys[key] = hotkey;
+    if (isTodoHotkey) {
+      // 1. Check for duplicates and clear them
+      const newHotkeys = { ...settings.todoHotkeys };
+      Object.keys(newHotkeys).forEach(k => {
+        if (newHotkeys[k] === hotkey) {
+          newHotkeys[k] = ''; // Clear duplicate
+        }
+      });
+      // Also check resetHotkey
+      let resetHotkey = settings.resetHotkey;
+      if (resetHotkey === hotkey) resetHotkey = '';
 
-    updateSettings({ 
-      todoHotkeys: newHotkeys 
-    });
+      newHotkeys[target] = hotkey;
+      updateSettings({ 
+        todoHotkeys: newHotkeys,
+        resetHotkey
+      });
+    } else {
+      // Clear duplicates in todoHotkeys
+      const newHotkeys = { ...settings.todoHotkeys };
+      Object.keys(newHotkeys).forEach(k => {
+        if (newHotkeys[k] === hotkey) {
+          newHotkeys[k] = '';
+        }
+      });
+      updateSettings({ 
+        resetHotkey: hotkey,
+        todoHotkeys: newHotkeys
+      });
+    }
     setRecordingKey(null);
   };
 
@@ -248,14 +267,30 @@ export const SettingsWindow = () => {
           <div className={SECTION_STYLE}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col">
-                <label className={LABEL_STYLE}>Сброс счетчиков</label>
-                <input 
-                  type="text"
-                  value={settings.resetHotkey}
-                  onChange={(e) => updateSettings({ resetHotkey: e.target.value })}
-                  className={INPUT_STYLE}
-                  placeholder="Напр: Ctrl+Shift+R"
-                />
+                <label className={LABEL_STYLE}>Сброс таймера (Глобальный)</label>
+                <div className="relative">
+                  <input 
+                    type="text"
+                    readOnly
+                    value={recordingKey === 'resetHotkey' ? 'Нажмите клавиши...' : settings.resetHotkey}
+                    onFocus={() => setRecordingKey('resetHotkey')}
+                    onBlur={() => setRecordingKey(null)}
+                    onKeyDown={(e) => handleKeyDown(e, 'resetHotkey', false)}
+                    className={`w-full bg-slate-800 border ${recordingKey === 'resetHotkey' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-700'} rounded px-4 py-2 text-slate-200 cursor-pointer focus:outline-none transition-all`}
+                    placeholder="Нажмите для записи..."
+                  />
+                  {recordingKey === 'resetHotkey' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <span className="flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2">
+                  * Работает даже если приложение свернуто
+                </p>
               </div>
               <div className="col-span-2">
                 <label className={LABEL_STYLE}>Задачи (Todo)</label>
@@ -272,7 +307,7 @@ export const SettingsWindow = () => {
                             value={recordingKey === key ? 'Нажмите клавиши...' : value}
                             onFocus={() => setRecordingKey(key)}
                             onBlur={() => setRecordingKey(null)}
-                            onKeyDown={(e) => handleKeyDown(e, key)}
+                            onKeyDown={(e) => handleKeyDown(e, key, true)}
                             className={`w-full bg-slate-800 border ${recordingKey === key ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-700'} rounded px-3 py-2 text-sm text-slate-200 cursor-pointer focus:outline-none transition-all`}
                             placeholder="Нажмите для записи..."
                           />

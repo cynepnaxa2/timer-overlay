@@ -51,8 +51,12 @@ describe('TodoWindow Integration', () => {
     expect(screen.getByDisplayValue('To be deleted')).toBeInTheDocument()
     
     const deleteButton = screen.getByLabelText('Delete')
+    // First click - confirmation state
     fireEvent.click(deleteButton)
+    expect(useTodoStore.getState().todos).toHaveLength(1)
     
+    // Second click - actual deletion
+    fireEvent.click(deleteButton)
     expect(useTodoStore.getState().todos).toHaveLength(0)
   })
 })

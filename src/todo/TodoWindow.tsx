@@ -40,7 +40,13 @@ export const TodoWindow: React.FC = () => {
   const { settings } = useSettingsStore();
   const [activeDrop, setActiveDrop] = useState<{ id: string; zone: DropZone } | null>(null);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
+  const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Reset delete confirmation when focus changes
+  useEffect(() => {
+    setConfirmDeleteTaskId(null);
+  }, [focusedTaskId]);
 
   // Initial load
   useEffect(() => {
@@ -142,16 +148,34 @@ export const TodoWindow: React.FC = () => {
         if (focusedTask && focusedTask.parentId) {
           setFocusedTaskId(focusedTask.parentId);
         }
-      } else if (e.key === 'Backspace' && !isInput && focusedTaskId) {
+      } else if (pressedHotkey === hotkeys.deleteTask && focusedTaskId) {
         e.preventDefault();
-        const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
-        deleteTodo(focusedTaskId);
-        if (flattenedTasks.length > 1) {
-          const nextIndex = index === flattenedTasks.length - 1 ? index - 1 : index;
-          // Note: flattenedTasks might be stale here, but it's okay for choosing next focus
-          const nextTask = flattenedTasks.filter(t => t.id !== focusedTaskId)[nextIndex];
-          if (nextTask) setFocusedTaskId(nextTask.id);
-        }
+        // Use the functional update to ensure we use the latest state of confirmDeleteTaskId
+        setConfirmDeleteTaskId(prev => {
+          if (prev === focusedTaskId) {
+            // Second press - delete
+            const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
+            deleteTodo(focusedTaskId);
+            
+            if (flattenedTasks.length > 1) {
+              const nextIndex = index === flattenedTasks.length - 1 ? index - 1 : index;
+              const remainingTasks = flattenedTasks.filter(t => t.id !== focusedTaskId);
+              const nextTask = remainingTasks[nextIndex];
+              if (nextTask) {
+                // We need to defer setting focus to avoid conflicts during render/delete
+                setTimeout(() => setFocusedTaskId(nextTask.id), 0);
+              }
+            }
+            return null;
+          } else {
+            // First press - set confirmation
+            return focusedTaskId;
+          }
+        });
+      } else if (e.key === 'Backspace' && !isInput && focusedTaskId) {
+        // Backspace should NOT delete tasks anymore, but we keep the preventDefault 
+        // to avoid browser navigation back
+        e.preventDefault();
       }
     };
 
@@ -271,7 +295,16 @@ export const TodoWindow: React.FC = () => {
                   depth={task.depth} 
                   dropZone={activeDrop?.id === task.id ? activeDrop.zone : null}
                   isFocused={focusedTaskId === task.id}
+                  isConfirmingDelete={confirmDeleteTaskId === task.id}
                   onFocus={() => setFocusedTaskId(task.id)}
+                  onDelete={() => {
+                    if (confirmDeleteTaskId === task.id) {
+                      deleteTodo(task.id);
+                      setConfirmDeleteTaskId(null);
+                    } else {
+                      setConfirmDeleteTaskId(task.id);
+                    }
+                  }}
                 />
               ))}
             </div>

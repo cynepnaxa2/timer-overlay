@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
     addRootTask: 'Ctrl+Shift+Enter', // Создать основную задачу
     execute: 'Ctrl+Space',
     complete: 'Delete',
+    deleteTask: 'Ctrl+Delete',     // Удалить задачу
     navNext: 'Alt+Down',
     navPrev: 'Alt+Up',
     navChild: 'Alt+Right',

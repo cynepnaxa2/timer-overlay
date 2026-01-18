@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
     addRootTask: 'Ctrl+Shift+Enter',
     execute: 'Ctrl+Space',
     complete: 'Delete',
+    deleteTask: 'Ctrl+Delete',
     navNext: 'Alt+Down',
     navPrev: 'Alt+Up',
     navChild: 'Alt+Right',

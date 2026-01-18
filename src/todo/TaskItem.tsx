@@ -12,7 +12,8 @@ import {
   Play, 
   Plus, 
   CornerDownRight,
-  GripVertical
+  GripVertical,
+  HelpCircle
 } from 'lucide-react';
 
 interface Props {
@@ -20,11 +21,13 @@ interface Props {
   depth: number;
   dropZone: DropZone;
   isFocused: boolean;
+  isConfirmingDelete: boolean;
   onFocus: () => void;
+  onDelete: () => void;
 }
 
-export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocused, onFocus }) => {
-  const { updateTodo, deleteTodo, todos, addTodo } = useTodoStore();
+export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocused, isConfirmingDelete, onFocus, onDelete }) => {
+  const { updateTodo, todos, addTodo } = useTodoStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const {
     attributes,
@@ -140,12 +143,19 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocuse
             <Check className="w-4 h-4" />
           </button>
           <button 
-            onClick={() => deleteTodo(task.id)}
-            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-red-500 rounded transition-colors active:scale-90"
-            title="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className={`p-1.5 hover:bg-white/10 rounded transition-colors active:scale-90 ${isConfirmingDelete ? 'text-red-400 bg-red-500/20' : 'text-slate-400 hover:text-red-500'}`}
+            title={isConfirmingDelete ? "Click again to confirm delete" : "Delete"}
             aria-label="Delete"
           >
-            <X className="w-4 h-4" />
+            {isConfirmingDelete ? (
+              <HelpCircle className="w-4 h-4 animate-pulse" />
+            ) : (
+              <X className="w-4 h-4" />
+            )}
           </button>
           <button 
             className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors active:scale-90"

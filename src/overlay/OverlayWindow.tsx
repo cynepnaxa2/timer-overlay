@@ -15,6 +15,15 @@ const MODE_DETAILS: Record<string, { emoji: string, symbol: string }> = {
 
 export const OverlayWindow: React.FC = () => {
   const { settings } = useSettingsStore();
+  const [animationKey, setAnimationKey] = React.useState(0);
+
+  React.useEffect(() => {
+    if (window.overlayApi) {
+      window.overlayApi.onRestartCycle(() => {
+        setAnimationKey(prev => prev + 1);
+      });
+    }
+  }, []);
 
   const { diameter, opacity, color, duration, timing, level, counterValue, modeInfo } = useMemo(() => {
     const d = settings.diameterPx || 60;
@@ -47,6 +56,7 @@ export const OverlayWindow: React.FC = () => {
       <style>{keyframes}</style>
       
       <div 
+        key={animationKey}
         className="crawling-timer absolute right-[10px] flex items-center justify-center pointer-events-none"
         style={{
           width: level === 1 ? `${diameter}px` : 'max-content',

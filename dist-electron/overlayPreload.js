@@ -4,5 +4,8 @@ contextBridge.exposeInMainWorld("overlayApi", {
   loadSettings: () => ipcRenderer.invoke("get-settings"),
   onSettingsUpdated: (callback) => {
     ipcRenderer.on("settings-updated", (_event, settings) => callback(settings));
+  },
+  onRestartCycle: (callback) => {
+    ipcRenderer.on("restart-cycle", () => callback());
   }
 });
