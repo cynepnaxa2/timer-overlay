@@ -90,13 +90,27 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocuse
 
         {/* Task Content */}
         <div className="flex items-center gap-2 flex-grow min-w-0">
-          <input
-            ref={inputRef}
+          <textarea
+            ref={inputRef as any}
             value={task.content}
             onFocus={onFocus}
-            onChange={(e) => updateTodo(task.id, { content: e.target.value })}
-            className={`bg-transparent border-none focus:outline-none flex-grow text-[14px] text-slate-200 py-1 px-1 ${task.completed ? 'line-through opacity-40' : ''}`}
+            onChange={(e) => {
+              updateTodo(task.id, { content: e.target.value });
+              // Auto-resize
+              e.target.style.height = 'auto';
+              e.target.style.height = `${e.target.scrollHeight}px`;
+            }}
+            rows={1}
+            className="bg-transparent border-none focus:outline-none flex-grow text-[14px] text-slate-200 py-1 px-1 resize-none overflow-hidden min-h-[24px]"
+            style={{ height: 'auto' }}
             aria-label="Task content"
+            onKeyDown={(e) => {
+              // Stop propagation for Enter so it adds a new line instead of triggering global hotkeys
+              // unless a modifier is pressed that matches a hotkey
+              if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                e.stopPropagation();
+              }
+            }}
           />
         </div>
 

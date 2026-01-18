@@ -21,9 +21,9 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   resetHotkey: 'Ctrl+Shift+R',
   todoHotkeys: {
-    addSiblingTask: 'Enter',      // Создать задачу того же уровня
-    addSubtask: 'Ctrl+Enter',     // Создать подзадачу
-    addRootTask: 'Shift+Enter',   // Создать основную задачу
+    addSiblingTask: 'Shift+Enter', // Создать задачу того же уровня
+    addSubtask: 'Ctrl+Enter',      // Создать подзадачу
+    addRootTask: 'Ctrl+Shift+Enter', // Создать основную задачу
     execute: 'Ctrl+Space',
     complete: 'Delete',
     navNext: 'Alt+Down',
