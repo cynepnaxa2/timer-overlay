@@ -61,7 +61,8 @@ export const TodoWindow: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // If we are in an input field (typing task content), only allow certain hotkeys
-      const isInput = (e.target as HTMLElement).tagName === 'INPUT';
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
       
       const parts = [];
       if (e.ctrlKey) parts.push('Ctrl');
@@ -80,6 +81,14 @@ export const TodoWindow: React.FC = () => {
       
       const pressedHotkey = parts.join('+');
       const hotkeys = settings.todoHotkeys;
+
+      // When typing in an input/textarea:
+      // - Allow modifier-based hotkeys (Ctrl, Alt, etc.)
+      // - Block single-key hotkeys (like Delete or Backspace) from triggering global actions
+      const isSingleKey = !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey;
+      if (isInput && isSingleKey) {
+        return;
+      }
 
       // Handle hotkeys
       if (pressedHotkey === hotkeys.addRootTask) {
