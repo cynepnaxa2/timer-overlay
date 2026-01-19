@@ -38,7 +38,7 @@ const getFlattenedTasks = (allTodos: Todo[], parentId: string | null = null, dep
 
 export const TodoWindow: React.FC = () => {
   const { todos, isLoaded, reorderTodos, addTodo, updateTodo, deleteTodo, loadTodosAction } = useTodoStore();
-  const { settings } = useSettingsStore();
+  const { settings, setSettings } = useSettingsStore();
   const [activeDrop, setActiveDrop] = useState<{ id: string; zone: DropZone } | null>(null);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState<string | null>(null);
@@ -54,7 +54,13 @@ export const TodoWindow: React.FC = () => {
     if (!isLoaded) {
       loadTodosAction();
     }
-  }, [isLoaded, loadTodosAction]);
+
+    if (window.todoApi) {
+      window.todoApi.onSettingsUpdated((newSettings: any) => {
+        setSettings(newSettings);
+      });
+    }
+  }, [isLoaded, loadTodosAction, setSettings]);
 
   const flattenedTasks = useMemo(() => getFlattenedTasks(todos), [todos]);
 

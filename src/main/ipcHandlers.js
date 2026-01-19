@@ -25,6 +25,8 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     }
   };
 
+  timerManager.setNotifyCallback(notifySettingsUpdated);
+
   ipcMain.handle('save-settings', async (_event, settings) => {
     // 1. Get current state (on disk/memory)
     const oldSettings = state.currentSettings || readSettings();
@@ -184,6 +186,8 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
   });
   
   ipcMain.handle('start-timer', (_event, motivationWord) => {
+    timerManager.startCounterTimer(true);
+    
     if (state.mainWindow && !state.mainWindow.isDestroyed()) {
       state.mainWindow.webContents.send('restart-cycle');
       if (motivationWord) {

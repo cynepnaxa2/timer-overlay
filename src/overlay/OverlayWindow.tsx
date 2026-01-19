@@ -14,7 +14,7 @@ const MODE_DETAILS: Record<string, { emoji: string, symbol: string }> = {
 };
 
 export const OverlayWindow: React.FC = () => {
-  const { settings } = useSettingsStore();
+  const { settings, setSettings } = useSettingsStore();
   const [animationKey, setAnimationKey] = React.useState(0);
 
   React.useEffect(() => {
@@ -22,8 +22,12 @@ export const OverlayWindow: React.FC = () => {
       window.overlayApi.onRestartCycle(() => {
         setAnimationKey(prev => prev + 1);
       });
+      
+      window.overlayApi.onSettingsUpdated((newSettings: any) => {
+        setSettings(newSettings);
+      });
     }
-  }, []);
+  }, [setSettings]);
 
   const { diameter, opacity, color, duration, timing, level, counterValue, modeInfo } = useMemo(() => {
     const d = settings.diameterPx || 60;

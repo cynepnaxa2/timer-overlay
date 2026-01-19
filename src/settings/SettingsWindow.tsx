@@ -33,8 +33,16 @@ const HOTKEY_LABELS: Record<string, string> = {
 };
 
 export const SettingsWindow = () => {
-  const { settings, updateSettings } = useSettingsStore();
+  const { settings, updateSettings, setSettings } = useSettingsStore();
   const [recordingKey, setRecordingKey] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (window.settingsApi) {
+      window.settingsApi.onSettingsUpdated((newSettings: any) => {
+        setSettings(newSettings);
+      });
+    }
+  }, [setSettings]);
 
   const handleKeyDown = (e: React.KeyboardEvent, target: string, isTodoHotkey: boolean) => {
     if (recordingKey !== target) return;

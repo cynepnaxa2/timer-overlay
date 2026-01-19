@@ -4,7 +4,13 @@ const { updateCounter, getFormattedCounter, resetDisplayCounters } = require('..
 const { writeSettings, readSettings } = require('../store/settingsStore.js.legacy');
 const { globalShortcut } = require('electron');
 
-function startCounterTimer() {
+let notifySettingsUpdatedCallback = null;
+
+function setNotifyCallback(cb) {
+  notifySettingsUpdatedCallback = cb;
+}
+
+function startCounterTimer(resetSession = false) {
   if (state.counterInterval) {
     clearInterval(state.counterInterval);
   }
@@ -13,6 +19,14 @@ function startCounterTimer() {
   if (!state.currentSettings.counters) state.currentSettings.counters = {};
   if (!state.currentSettings.displayCounters) state.currentSettings.displayCounters = {};
   
+  if (resetSession) {
+    state.currentSettings.displayCounters = resetDisplayCounters();
+    state.currentSettings = writeSettings(state.currentSettings);
+    if (notifySettingsUpdatedCallback) {
+      notifySettingsUpdatedCallback(state.currentSettings);
+    }
+  }
+
   state.cycleStartTime = Date.now();
   
   state.counterInterval = setInterval(() => {
@@ -34,6 +48,10 @@ function startCounterTimer() {
     state.currentSettings.displayCounters[modeId].totalMinutes = currentDisplayTotalMinutes;
     
     state.currentSettings = writeSettings(state.currentSettings);
+    
+    if (notifySettingsUpdatedCallback) {
+      notifySettingsUpdatedCallback(state.currentSettings);
+    }
     
     if (state.mainWindow && !state.mainWindow.isDestroyed()) {
       const formatted = getFormattedCounter(state.currentSettings.displayCounters, modeId);
@@ -69,11 +87,8 @@ function registerResetHotkey() {
       // ... same logic ...
       if (!state.currentSettings) state.currentSettings = readSettings();
 
-      state.currentSettings.displayCounters = resetDisplayCounters();
-      state.currentSettings = writeSettings(state.currentSettings);
-      
       state.cycleStartTime = Date.now();
-      startCounterTimer();
+      startCounterTimer(true);
       
       if (state.mainWindow && !state.mainWindow.isDestroyed()) {
         const modeId = state.currentSettings.mode || 'money';
@@ -104,6 +119,7 @@ function registerResetHotkey() {
 
 module.exports = {
   startCounterTimer,
-  registerResetHotkey
+  registerResetHotkey,
+  setNotifyCallback
 };
 
