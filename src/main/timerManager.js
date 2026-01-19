@@ -55,15 +55,18 @@ function registerResetHotkey() {
   if (!state.currentSettings) state.currentSettings = readSettings();
   const hotkey = state.currentSettings.resetHotkey || 'Ctrl+Shift+R';
   
-  if (state.resetHotkeyRegistered) {
+  if (state.resetHotkeyRegistered && state.lastRegisteredHotkey) {
     try {
-      globalShortcut.unregister(hotkey);
+      globalShortcut.unregister(state.lastRegisteredHotkey);
       state.resetHotkeyRegistered = false;
     } catch {}
   }
   
+  if (!hotkey) return; // Don't register if empty
+
   try {
     const registered = globalShortcut.register(hotkey, () => {
+      // ... same logic ...
       if (!state.currentSettings) state.currentSettings = readSettings();
 
       state.currentSettings.displayCounters = resetDisplayCounters();
@@ -92,6 +95,7 @@ function registerResetHotkey() {
     
     if (registered) {
       state.resetHotkeyRegistered = true;
+      state.lastRegisteredHotkey = hotkey;
     }
   } catch (err) {
     console.error('Error registering reset hotkey:', err);

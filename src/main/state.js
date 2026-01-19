@@ -7,6 +7,7 @@ module.exports = {
   currentSettings: null,
   counterInterval: null,
   cycleStartTime: null,
-  resetHotkeyRegistered: false
+  resetHotkeyRegistered: false,
+  lastRegisteredHotkey: null
 };
 

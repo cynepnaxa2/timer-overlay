@@ -11,7 +11,6 @@ import {
   X, 
   Play, 
   Plus, 
-  CornerDownRight,
   GripVertical,
   HelpCircle
 } from 'lucide-react';
@@ -28,7 +27,7 @@ interface Props {
 
 export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocused, isConfirmingDelete, onFocus, onDelete }) => {
   const { updateTodo, todos, addTodo } = useTodoStore();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const {
     attributes,
     listeners,
@@ -39,10 +38,18 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocuse
   } = useSortable({ id: task.id });
 
   useEffect(() => {
-    if (isFocused && inputRef.current) {
-      inputRef.current.focus();
+    if (isFocused && textareaRef.current) {
+      textareaRef.current.focus();
     }
   }, [isFocused]);
+
+  // Handle auto-resize on content change
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [task.content]);
 
   const style = {
     transform: isDragging ? CSS.Transform.toString(transform) : undefined,
@@ -94,18 +101,14 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocuse
         {/* Task Content */}
         <div className="flex items-center gap-2 flex-grow min-w-0">
           <textarea
-            ref={inputRef as any}
+            ref={textareaRef}
             value={task.content}
             onFocus={onFocus}
             onChange={(e) => {
               updateTodo(task.id, { content: e.target.value });
-              // Auto-resize
-              e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
             }}
             rows={1}
             className="bg-transparent border-none focus:outline-none flex-grow text-[14px] text-slate-200 py-1 px-1 resize-none overflow-hidden min-h-[24px]"
-            style={{ height: 'auto' }}
             aria-label="Task content"
             onKeyDown={(e) => {
               // Stop propagation for Enter so it adds a new line instead of triggering global hotkeys
@@ -130,6 +133,11 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocuse
             <Plus className="w-4 h-4" />
           </button>
           <button 
+            onClick={() => {
+              if (window.todoApi) {
+                (window.todoApi as any).startTimer(task.content);
+              }
+            }}
             className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors active:scale-90"
             title="Start Timer"
           >
@@ -156,21 +164,6 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocuse
             ) : (
               <X className="w-4 h-4" />
             )}
-          </button>
-          <button 
-            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors active:scale-90"
-            title="Indent"
-          >
-            <CornerDownRight className="w-4 h-4" />
-          </button>
-          <button 
-            className="p-1.5 hover:bg-white/10 text-slate-400 hover:text-white rounded transition-colors active:scale-90"
-            title="Toggle View"
-          >
-            <div className="w-4 h-4 flex flex-col items-center justify-center gap-0.5">
-              <div className="w-3 h-[1px] bg-current" />
-              <div className="w-3 h-[1px] bg-current" />
-            </div>
           </button>
         </div>
       </div>

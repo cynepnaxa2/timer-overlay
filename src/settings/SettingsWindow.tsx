@@ -1,5 +1,6 @@
 import React from 'react';
 import { useSettingsStore } from '../store/settingsStore';
+import { normalizeHotkey } from '../utils/hotkeys';
 import { 
   Monitor, 
   Palette, 
@@ -41,25 +42,10 @@ export const SettingsWindow = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    const parts = [];
-    if (e.ctrlKey) parts.push('Ctrl');
-    if (e.shiftKey) parts.push('Shift');
-    if (e.altKey) parts.push('Alt');
-    if (e.metaKey) parts.push('Meta');
-
     // Skip if only modifiers are pressed
     if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
 
-    let keyName = e.key;
-    if (keyName === ' ') keyName = 'Space';
-    if (keyName === 'ArrowUp') keyName = 'Up';
-    if (keyName === 'ArrowDown') keyName = 'Down';
-    if (keyName === 'ArrowLeft') keyName = 'Left';
-    if (keyName === 'ArrowRight') keyName = 'Right';
-    if (keyName.length === 1) keyName = keyName.toUpperCase();
-    
-    parts.push(keyName);
-    const hotkey = parts.join('+');
+    const hotkey = normalizeHotkey(e);
 
     if (isTodoHotkey) {
       // 1. Check for duplicates and clear them

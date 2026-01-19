@@ -19,6 +19,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { TaskItem } from './TaskItem';
 import { Plus, Check } from 'lucide-react';
 import { Todo } from '../types';
+import { normalizeHotkey } from '../utils/hotkeys';
 
 export type DropZone = 'top' | 'center' | 'bottom' | null;
 
@@ -60,130 +61,101 @@ export const TodoWindow: React.FC = () => {
   // Global hotkeys handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // If we are in an input field (typing task content), only allow certain hotkeys
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      
-      const parts = [];
-      if (e.ctrlKey) parts.push('Ctrl');
-      if (e.shiftKey) parts.push('Shift');
-      if (e.altKey) parts.push('Alt');
-      if (e.metaKey) parts.push('Meta');
-      
-      let keyName = e.key;
-      if (keyName === ' ') keyName = 'Space';
-      if (keyName === 'ArrowUp') keyName = 'Up';
-      if (keyName === 'ArrowDown') keyName = 'Down';
-      if (keyName === 'ArrowLeft') keyName = 'Left';
-      if (keyName === 'ArrowRight') keyName = 'Right';
-      if (keyName.length === 1) keyName = keyName.toUpperCase();
-      parts.push(keyName);
-      
-      const pressedHotkey = parts.join('+');
+      const pressedHotkey = normalizeHotkey(e);
       const hotkeys = settings.todoHotkeys;
 
-      // When typing in an input/textarea:
-      // - Allow modifier-based hotkeys (Ctrl, Alt, etc.)
-      // - Block single-key hotkeys (like Delete or Backspace) from triggering global actions
+      // When typing in an input/textarea, block single-key hotkeys (like Delete or Backspace)
       const isSingleKey = !e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey;
-      if (isInput && isSingleKey) {
-        return;
-      }
+      if (isInput && isSingleKey) return;
 
-      // Handle hotkeys
-      if (pressedHotkey === hotkeys.addRootTask) {
-        e.preventDefault();
-        const newTodo = addTodo('');
-        setFocusedTaskId(newTodo.id);
-      } else if (pressedHotkey === hotkeys.addSubtask) {
-        if (focusedTaskId) {
-          e.preventDefault();
-          const newTodo = addTodo('', focusedTaskId);
-          updateTodo(focusedTaskId, { collapsed: false });
-          setFocusedTaskId(newTodo.id);
-        }
-      } else if (pressedHotkey === hotkeys.addSiblingTask) {
-        e.preventDefault();
-        if (focusedTaskId) {
-          const focusedTask = todos.find(t => t.id === focusedTaskId);
-          if (focusedTask) {
-            const newTodo = addTodo('', focusedTask.parentId, focusedTaskId);
-            setFocusedTaskId(newTodo.id);
-          }
-        } else {
-          // If no task focused, add sibling as root task
+      const actions: Record<string, () => void> = {
+        [hotkeys.addRootTask]: () => {
           const newTodo = addTodo('');
           setFocusedTaskId(newTodo.id);
-        }
-      } else if (pressedHotkey === hotkeys.execute && focusedTaskId) {
-        e.preventDefault();
-        const focusedTask = todos.find(t => t.id === focusedTaskId);
-        if (focusedTask && window.todoApi) {
-          (window.todoApi as any).startTimer(focusedTask.content);
-        }
-      } else if (pressedHotkey === hotkeys.complete && focusedTaskId) {
-        e.preventDefault();
-        const focusedTask = todos.find(t => t.id === focusedTaskId);
-        if (focusedTask) {
-          updateTodo(focusedTaskId, { completed: !focusedTask.completed });
-        }
-      } else if (pressedHotkey === hotkeys.navNext) {
-        e.preventDefault();
-        const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
-        if (index < flattenedTasks.length - 1) {
-          setFocusedTaskId(flattenedTasks[index + 1].id);
-        } else if (flattenedTasks.length > 0) {
-          setFocusedTaskId(flattenedTasks[0].id);
-        }
-      } else if (pressedHotkey === hotkeys.navPrev) {
-        e.preventDefault();
-        const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
-        if (index > 0) {
-          setFocusedTaskId(flattenedTasks[index - 1].id);
-        } else if (flattenedTasks.length > 0) {
-          setFocusedTaskId(flattenedTasks[flattenedTasks.length - 1].id);
-        }
-      } else if (pressedHotkey === hotkeys.navChild && focusedTaskId) {
-        e.preventDefault();
-        const children = todos.filter(t => t.parentId === focusedTaskId);
-        if (children.length > 0) {
-          updateTodo(focusedTaskId, { collapsed: false });
-          const sortedChildren = [...children].sort((a, b) => (a.order || 0) - (b.order || 0));
-          setFocusedTaskId(sortedChildren[0].id);
-        }
-      } else if (pressedHotkey === hotkeys.navParent && focusedTaskId) {
-        e.preventDefault();
-        const focusedTask = todos.find(t => t.id === focusedTaskId);
-        if (focusedTask && focusedTask.parentId) {
-          setFocusedTaskId(focusedTask.parentId);
-        }
-      } else if (pressedHotkey === hotkeys.deleteTask && focusedTaskId) {
-        e.preventDefault();
-        // Use the functional update to ensure we use the latest state of confirmDeleteTaskId
-        setConfirmDeleteTaskId(prev => {
-          if (prev === focusedTaskId) {
-            // Second press - delete
-            const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
-            deleteTodo(focusedTaskId);
-            
-            if (flattenedTasks.length > 1) {
-              const nextIndex = index === flattenedTasks.length - 1 ? index - 1 : index;
-              const remainingTasks = flattenedTasks.filter(t => t.id !== focusedTaskId);
-              const nextTask = remainingTasks[nextIndex];
-              if (nextTask) {
-                // We need to defer setting focus to avoid conflicts during render/delete
-                setTimeout(() => setFocusedTaskId(nextTask.id), 0);
-              }
-            }
-            return null;
-          } else {
-            // First press - set confirmation
-            return focusedTaskId;
+        },
+        [hotkeys.addSubtask]: () => {
+          if (focusedTaskId) {
+            const newTodo = addTodo('', focusedTaskId);
+            updateTodo(focusedTaskId, { collapsed: false });
+            setFocusedTaskId(newTodo.id);
           }
-        });
-      } else if (e.key === 'Backspace' && !isInput && focusedTaskId) {
-        // Backspace should NOT delete tasks anymore, but we keep the preventDefault 
-        // to avoid browser navigation back
+        },
+        [hotkeys.addSiblingTask]: () => {
+          if (focusedTaskId) {
+            const focusedTask = todos.find(t => t.id === focusedTaskId);
+            if (focusedTask) {
+              const newTodo = addTodo('', focusedTask.parentId, focusedTaskId);
+              setFocusedTaskId(newTodo.id);
+            }
+          } else {
+            const newTodo = addTodo('');
+            setFocusedTaskId(newTodo.id);
+          }
+        },
+        [hotkeys.execute]: () => {
+          if (focusedTaskId) {
+            const focusedTask = todos.find(t => t.id === focusedTaskId);
+            if (focusedTask && window.todoApi) {
+              (window.todoApi as any).startTimer(focusedTask.content);
+            }
+          }
+        },
+        [hotkeys.complete]: () => {
+          if (focusedTaskId) {
+            const focusedTask = todos.find(t => t.id === focusedTaskId);
+            if (focusedTask) updateTodo(focusedTaskId, { completed: !focusedTask.completed });
+          }
+        },
+        [hotkeys.navNext]: () => {
+          const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
+          const nextIndex = (index + 1) % flattenedTasks.length;
+          if (flattenedTasks.length > 0) setFocusedTaskId(flattenedTasks[nextIndex].id);
+        },
+        [hotkeys.navPrev]: () => {
+          const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
+          const prevIndex = (index - 1 + flattenedTasks.length) % flattenedTasks.length;
+          if (flattenedTasks.length > 0) setFocusedTaskId(flattenedTasks[prevIndex].id);
+        },
+        [hotkeys.navChild]: () => {
+          if (focusedTaskId) {
+            const children = todos.filter(t => t.parentId === focusedTaskId);
+            if (children.length > 0) {
+              updateTodo(focusedTaskId, { collapsed: false });
+              const sortedChildren = [...children].sort((a, b) => (a.order || 0) - (b.order || 0));
+              setFocusedTaskId(sortedChildren[0].id);
+            }
+          }
+        },
+        [hotkeys.navParent]: () => {
+          if (focusedTaskId) {
+            const focusedTask = todos.find(t => t.id === focusedTaskId);
+            if (focusedTask && focusedTask.parentId) setFocusedTaskId(focusedTask.parentId);
+          }
+        },
+        [hotkeys.deleteTask]: () => {
+          if (!focusedTaskId) return;
+          setConfirmDeleteTaskId(prev => {
+            if (prev === focusedTaskId) {
+              const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
+              deleteTodo(focusedTaskId);
+              if (flattenedTasks.length > 1) {
+                const nextIndex = index === flattenedTasks.length - 1 ? index - 1 : index;
+                const nextTask = flattenedTasks.filter(t => t.id !== focusedTaskId)[nextIndex];
+                if (nextTask) setTimeout(() => setFocusedTaskId(nextTask.id), 0);
+              }
+              return null;
+            }
+            return focusedTaskId;
+          });
+        }
+      };
+
+      if (actions[pressedHotkey]) {
+        e.preventDefault();
+        actions[pressedHotkey]();
+      } else if (e.key === 'Backspace' && !isInput) {
         e.preventDefault();
       }
     };
