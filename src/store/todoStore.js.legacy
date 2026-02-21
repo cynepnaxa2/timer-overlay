@@ -225,6 +225,7 @@ function ensureDemoTodos() {
 }
 
 module.exports = {
+  getTodosPath,
   readTodos,
   writeTodos,
   createTodo,

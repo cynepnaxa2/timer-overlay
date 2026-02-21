@@ -3,8 +3,10 @@ const state = require('./state');
 const { readSettings, writeSettings } = require('../store/settingsStore.js.legacy');
 const { getMode, getAllModes, serializeMode } = require('../config/modes');
 const { getFormattedCounter, resetDisplayCounters } = require('../utils/counters');
-const todoService = require('../services/todoService');
+const fs = require('fs');
 const path = require('path');
+const todoService = require('../services/todoService');
+const { getTodosPath, readTodos } = require('../store/todoStore.js.legacy');
 
 function registerIpcHandlers(windowManager, timerManager, trayManager) {
   ipcMain.handle('save-todos', (_event, todos) => {
@@ -255,30 +257,57 @@ function registerIpcHandlers(windowManager, timerManager, trayManager) {
     }
   });
   
-  ipcMain.handle('select-sync-folder', async () => {
+  ipcMain.handle('select-sync-folder', async (_event, options) => {
     if (!state.settingsWindow || state.settingsWindow.isDestroyed()) {
       return null;
     }
-    
+
+    const copyCurrentFile = options && options.copyCurrentFile === true;
+    if (copyCurrentFile) {
+      const currentPath = getTodosPath();
+      if (fs.existsSync(currentPath)) {
+        const currentTodos = readTodos();
+        const result = await dialog.showOpenDialog(state.settingsWindow, {
+          title: 'Выберите папку для синхронизации',
+          properties: ['openDirectory']
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+          return null;
+        }
+        const newPath = result.filePaths[0];
+        fs.mkdirSync(newPath, { recursive: true });
+        fs.writeFileSync(
+          path.join(newPath, 'todos.json'),
+          JSON.stringify(currentTodos, null, 2),
+          'utf8'
+        );
+        if (!state.currentSettings) state.currentSettings = readSettings();
+        state.currentSettings.syncFolderPath = newPath;
+        state.currentSettings = writeSettings(state.currentSettings);
+        notifyTodosUpdated();
+        return newPath;
+      }
+    }
+
     const result = await dialog.showOpenDialog(state.settingsWindow, {
       title: 'Выберите папку для синхронизации',
       properties: ['openDirectory']
     });
-    
+
     if (result.canceled || result.filePaths.length === 0) {
       return null;
     }
-    
+
     const newPath = result.filePaths[0];
-    
+
     // Update settings with new path
     if (!state.currentSettings) state.currentSettings = readSettings();
     state.currentSettings.syncFolderPath = newPath;
     state.currentSettings = writeSettings(state.currentSettings);
-    
+
     // Notify all windows that todos might have changed
     notifyTodosUpdated();
-    
+
     return newPath;
   });
 }

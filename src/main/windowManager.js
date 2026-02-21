@@ -211,13 +211,7 @@ function createTodoWindow() {
     todoService.ensureDemo();
     state.todoWindow.maximize();
     state.todoWindow.show();
-    
-    state.todoWindow.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        state.todoWindow.webContents.openDevTools();
-      }, 500);
-    });
-    
+
     // Register shortcuts locally for todo window if needed, 
     // but in main.js they were global. Keeping them global for now as per original.
     

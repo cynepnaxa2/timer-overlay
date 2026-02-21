@@ -35,6 +35,7 @@ const HOTKEY_LABELS: Record<string, string> = {
 export const SettingsWindow = () => {
   const { settings, updateSettings, setSettings } = useSettingsStore();
   const [recordingKey, setRecordingKey] = React.useState<string | null>(null);
+  const [copyCurrentFileToNewFolder, setCopyCurrentFileToNewFolder] = React.useState(false);
 
   React.useEffect(() => {
     if (window.settingsApi) {
@@ -99,9 +100,11 @@ export const SettingsWindow = () => {
 
   const handleSelectSyncFolder = async () => {
     if (window.settingsApi) {
-      const path = await (window.settingsApi as any).selectSyncFolder();
-      if (path) {
-        updateSettings({ syncFolderPath: path });
+      const newPath = await window.settingsApi.selectSyncFolder({
+        copyCurrentFile: copyCurrentFileToNewFolder
+      });
+      if (newPath) {
+        updateSettings({ syncFolderPath: newPath });
       }
     }
   };
@@ -332,11 +335,13 @@ export const SettingsWindow = () => {
             <div className="space-y-6">
               <div className="flex flex-col gap-2">
                 <label className={LABEL_STYLE}>
-                  <FolderSync className="w-4 h-4" /> Папка синхронизации (todos.json)
+                  <FolderSync className="w-4 h-4" /> Путь к файлу с задачами
                 </label>
                 <div className="flex gap-2">
                   <div className="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-slate-400 text-sm truncate">
-                    {settings.syncFolderPath || 'Используется стандартный путь'}
+                    {settings.syncFolderPath
+                      ? `${settings.syncFolderPath.replace(/[/\\]+$/, '')}/todos.json`
+                      : 'Используется стандартный путь'}
                   </div>
                   <button 
                     onClick={handleSelectSyncFolder}
@@ -345,6 +350,15 @@ export const SettingsWindow = () => {
                     Выбрать папку
                   </button>
                 </div>
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={copyCurrentFileToNewFolder}
+                    onChange={(e) => setCopyCurrentFileToNewFolder(e.target.checked)}
+                    className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+                  />
+                  Скопировать текущий файл задач в новую папку
+                </label>
               </div>
 
               <div className="pt-4 border-t border-slate-700 flex justify-between items-center">
