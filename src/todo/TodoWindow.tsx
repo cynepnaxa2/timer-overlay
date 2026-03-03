@@ -23,6 +23,14 @@ import { normalizeHotkey } from '../utils/hotkeys';
 
 export type DropZone = 'top' | 'center' | 'bottom' | null;
 
+/** Returns true if taskId is a descendant of ancestorId (would create cycle if ancestor became child of taskId). */
+function isDescendant(ancestorId: string, taskId: string, allTodos: Todo[]): boolean {
+  const task = allTodos.find(t => t.id === taskId);
+  if (!task || !task.parentId) return false;
+  if (task.parentId === ancestorId) return true;
+  return isDescendant(ancestorId, task.parentId, allTodos);
+}
+
 const getFlattenedTasks = (allTodos: Todo[], parentId: string | null = null, depth = 0): (Todo & { depth: number })[] => {
   return allTodos
     .filter(t => t.parentId === parentId)
@@ -195,14 +203,22 @@ export const TodoWindow: React.FC = () => {
   }, []);
 
   const handleDragMove = useCallback((event: DragMoveEvent) => {
-    const { over } = event;
+    const { active, over } = event;
     if (over) {
-      const zone = calculateZone(event);
+      let zone = calculateZone(event);
+      // Не показывать зону "вложение", если целевая задача — потомок перетаскиваемой
+      if (zone === 'center' && active.id !== over.id) {
+        const activeTask = todos.find(t => t.id === active.id);
+        const overTask = todos.find(t => t.id === over.id);
+        if (activeTask && overTask && isDescendant(activeTask.id, overTask.id, todos)) {
+          zone = null;
+        }
+      }
       setActiveDrop({ id: over.id as string, zone });
     } else {
       setActiveDrop(null);
     }
-  }, [calculateZone]);
+  }, [calculateZone, todos]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -216,6 +232,8 @@ export const TodoWindow: React.FC = () => {
         const zone = calculateZone(event);
 
         if (zone === 'center') {
+          // Не допускаем перенос родительской задачи в дочернюю (целевая не должна быть потомком перетаскиваемой)
+          if (isDescendant(activeTask.id, overTask.id, todos)) return;
           updateTodo(activeTask.id, { parentId: overTask.id, order: 0 });
           updateTodo(overTask.id, { collapsed: false });
         } else {
