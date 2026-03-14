@@ -50,6 +50,7 @@ export const TodoWindow: React.FC = () => {
   const [activeDrop, setActiveDrop] = useState<{ id: string; zone: DropZone } | null>(null);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Reset delete confirmation when focus changes
@@ -71,6 +72,17 @@ export const TodoWindow: React.FC = () => {
   }, [isLoaded, loadTodosAction, setSettings]);
 
   const flattenedTasks = useMemo(() => getFlattenedTasks(todos), [todos]);
+  const visibleTasks = useMemo(
+    () => flattenedTasks.filter(t => t.completed === showCompleted),
+    [flattenedTasks, showCompleted]
+  );
+
+  // Clear or adjust focus when current task is no longer in visible list
+  useEffect(() => {
+    if (focusedTaskId && !visibleTasks.some(t => t.id === focusedTaskId)) {
+      setFocusedTaskId(null);
+    }
+  }, [visibleTasks, focusedTaskId]);
 
   // Global hotkeys handler
   useEffect(() => {
@@ -123,40 +135,43 @@ export const TodoWindow: React.FC = () => {
           }
         },
         [hotkeys.navNext]: () => {
-          const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
-          const nextIndex = (index + 1) % flattenedTasks.length;
-          if (flattenedTasks.length > 0) setFocusedTaskId(flattenedTasks[nextIndex].id);
+          const index = visibleTasks.findIndex(t => t.id === focusedTaskId);
+          const nextIndex = (index + 1) % visibleTasks.length;
+          if (visibleTasks.length > 0) setFocusedTaskId(visibleTasks[nextIndex].id);
         },
         [hotkeys.navPrev]: () => {
-          const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
-          const prevIndex = (index - 1 + flattenedTasks.length) % flattenedTasks.length;
-          if (flattenedTasks.length > 0) setFocusedTaskId(flattenedTasks[prevIndex].id);
+          const index = visibleTasks.findIndex(t => t.id === focusedTaskId);
+          const prevIndex = (index - 1 + visibleTasks.length) % visibleTasks.length;
+          if (visibleTasks.length > 0) setFocusedTaskId(visibleTasks[prevIndex].id);
         },
         [hotkeys.navChild]: () => {
           if (focusedTaskId) {
-            const children = todos.filter(t => t.parentId === focusedTaskId);
+            const children = todos
+              .filter(t => t.parentId === focusedTaskId && visibleTasks.some(v => v.id === t.id))
+              .sort((a, b) => (a.order || 0) - (b.order || 0));
             if (children.length > 0) {
               updateTodo(focusedTaskId, { collapsed: false });
-              const sortedChildren = [...children].sort((a, b) => (a.order || 0) - (b.order || 0));
-              setFocusedTaskId(sortedChildren[0].id);
+              setFocusedTaskId(children[0].id);
             }
           }
         },
         [hotkeys.navParent]: () => {
           if (focusedTaskId) {
             const focusedTask = todos.find(t => t.id === focusedTaskId);
-            if (focusedTask && focusedTask.parentId) setFocusedTaskId(focusedTask.parentId);
+            if (focusedTask?.parentId && visibleTasks.some(t => t.id === focusedTask.parentId)) {
+              setFocusedTaskId(focusedTask.parentId);
+            }
           }
         },
         [hotkeys.deleteTask]: () => {
           if (!focusedTaskId) return;
           setConfirmDeleteTaskId(prev => {
             if (prev === focusedTaskId) {
-              const index = flattenedTasks.findIndex(t => t.id === focusedTaskId);
+              const index = visibleTasks.findIndex(t => t.id === focusedTaskId);
               deleteTodo(focusedTaskId);
-              if (flattenedTasks.length > 1) {
-                const nextIndex = index === flattenedTasks.length - 1 ? index - 1 : index;
-                const nextTask = flattenedTasks.filter(t => t.id !== focusedTaskId)[nextIndex];
+              if (visibleTasks.length > 1) {
+                const nextIndex = index === visibleTasks.length - 1 ? index - 1 : index;
+                const nextTask = visibleTasks.filter(t => t.id !== focusedTaskId)[nextIndex];
                 if (nextTask) setTimeout(() => setFocusedTaskId(nextTask.id), 0);
               }
               return null;
@@ -176,7 +191,7 @@ export const TodoWindow: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [settings.todoHotkeys, focusedTaskId, todos, flattenedTasks, addTodo, updateTodo, deleteTodo]);
+  }, [settings.todoHotkeys, focusedTaskId, todos, visibleTasks, addTodo, updateTodo, deleteTodo]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -275,8 +290,12 @@ export const TodoWindow: React.FC = () => {
         >
           <Plus className="w-4 h-4 text-white" />
         </button>
-        <button className="p-1.5 hover:bg-white/10 rounded-full transition-colors ml-1 active:scale-95">
-          <Check className="w-4 h-4 text-slate-400" />
+        <button
+          onClick={() => setShowCompleted(prev => !prev)}
+          className={`p-1.5 rounded-full transition-colors ml-1 active:scale-95 ${showCompleted ? 'bg-green-600/20 text-green-500 hover:bg-green-600/30' : 'hover:bg-white/10 text-slate-400'}`}
+          aria-label={showCompleted ? 'Show active tasks' : 'Show completed tasks'}
+        >
+          <Check className="w-4 h-4" />
         </button>
       </div>
 
@@ -289,11 +308,11 @@ export const TodoWindow: React.FC = () => {
           onDragCancel={onDragCancel}
         >
           <SortableContext 
-            items={flattenedTasks.map(t => t.id)}
+            items={visibleTasks.map(t => t.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="flex flex-col">
-              {flattenedTasks.map(task => (
+              {visibleTasks.map(task => (
                 <TaskItem 
                   key={task.id} 
                   task={task} 
@@ -319,6 +338,16 @@ export const TodoWindow: React.FC = () => {
         {todos.length === 0 && (
           <div className="p-8 text-slate-500 text-sm text-center italic">
             No tasks yet. Create one to get started!
+          </div>
+        )}
+        {todos.length > 0 && visibleTasks.length === 0 && !showCompleted && (
+          <div className="p-8 text-slate-500 text-sm text-center italic">
+            All done for now.
+          </div>
+        )}
+        {todos.length > 0 && visibleTasks.length === 0 && showCompleted && (
+          <div className="p-8 text-slate-500 text-sm text-center italic">
+            No completed tasks.
           </div>
         )}
       </div>

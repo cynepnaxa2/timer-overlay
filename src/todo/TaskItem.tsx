@@ -147,6 +147,7 @@ export const TaskItem: React.FC<Props> = memo(({ task, depth, dropZone, isFocuse
             onClick={() => updateTodo(task.id, { completed: !task.completed })}
             className={`p-1.5 hover:bg-white/10 rounded transition-colors active:scale-90 ${task.completed ? 'text-green-500' : 'text-slate-400 hover:text-green-500'}`}
             title="Complete"
+            aria-label="Complete"
           >
             <Check className="w-4 h-4" />
           </button>
